@@ -15,7 +15,7 @@ BlossomMerger<Real>::BlossomMerger(MeshLib::Mesh3D<Real> *mesh) : Tri2QuadMerger
 template <typename Real>
 MeshLib::Mesh3D<Real> *BlossomMerger<Real>::get_merged_mesh()
 {
-    return valid_compute ? this->create_merged_mesh() : 0;
+    return valid_compute ? this->create_merged_mesh() : nullptr;
 }
 //////////////////////////////////////////////////////////////////////////
 template <typename Real>
@@ -24,7 +24,7 @@ void BlossomMerger<Real>::blossom_merge()
     valid_compute = false;
     auto m_pmesh = this->m_pmesh;
     m_pmesh->reset_all_tag(false);
-    int node_num = (int)m_pmesh->get_num_of_faces();
+    const int node_num = static_cast<int>(m_pmesh->get_num_of_faces());
     int edge_num = 0;
     std::vector<int> edges;
     std::vector<int> weights;
@@ -37,7 +37,7 @@ void BlossomMerger<Real>::blossom_merge()
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); i++)
     {
         auto edge = m_pmesh->get_edge(i);
-        if (edge->face == 0 || edge->pair->face == 0 || edge->pair->face->id > edge->face->id)
+        if (edge->face == nullptr || edge->pair->face == nullptr || edge->pair->face->id > edge->face->id)
             continue;
         Real angle_regularity = 0;
         bool suc = this->quad_mergeable(edge, angle_regularity, quad_normal, dir0, dir1, dir2, dir3, false);
@@ -45,16 +45,16 @@ void BlossomMerger<Real>::blossom_merge()
         if (!suc)
             angle_regularity = 100000; // set to a large value to skip this edge
 
-        edges.push_back((int)edge->pair->face->id);
-        edges.push_back((int)edge->face->id);
-        weights.push_back((int)(100*angle_regularity));
+        edges.emplace_back(static_cast<int>(edge->pair->face->id));
+        edges.emplace_back(static_cast<int>(edge->face->id));
+        weights.emplace_back(static_cast<int>(100 * angle_regularity));
         interior_edges[MySortedTuple<ptrdiff_t, 2, false>(edge->pair->face->id, edge->face->id)] = edge;
-        edge_num++;
+        ++edge_num;
     }
 
     PerfectMatching *pm = new PerfectMatching(node_num, edge_num);
 
-    for (auto e = 0; e < edge_num; e++)
+    for (int e = 0; e < edge_num; ++e)
         pm->AddEdge(edges[2 * e], edges[2 * e + 1], weights[e]);
 
     try
@@ -66,7 +66,7 @@ void BlossomMerger<Real>::blossom_merge()
         // double cost = ComputePerfectMatchingCost(node_num, edge_num, edges, weights, pm);
         // std::cout << "Perfect matching cost: " << cost << std::endl;
 
-        for (auto i = 0; i < node_num; i++)
+        for (int i = 0; i < node_num; ++i)
         {
             auto j = pm->GetMatch(i);
             if (i > j)

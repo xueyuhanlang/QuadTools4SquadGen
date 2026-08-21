@@ -24,20 +24,18 @@ int main(int argc, char **argv)
         auto result = options.parse(argc, argv);
         if (result.count("help"))
         {
-            std::cout << options.help({"", "Group"}) << std::endl;
-            exit(0);
+            std::cout << options.help({"", "Group"}) << '\n';
+            return 0;
         }
 
         if (result.count("i") == 0)
         {
-            std::cout << "No input file!" << std::endl;
-            std::cout << "Please use -i option" << std::endl;
-            exit(0);
+            std::cout << "No input file!\nPlease use -i option\n";
+            return 1;
         }
         if (result.count("o") == 0)
         {
-            std::cout << "No output file!" << std::endl;
-            std::cout << "Please use -o option" << std::endl;
+            std::cout << "No output file!\nPlease use -o option\n";
         }
 
         auto inputfile = result["i"].as<std::string>();
@@ -45,20 +43,20 @@ int main(int argc, char **argv)
 
         if (!std::filesystem::exists(inputfile))
         {
-            std::cout << "Input file does not exist!" << std::endl;
-            exit(0);
+            std::cout << "Input file does not exist!\n";
+            return 1;
         }
 
         auto ext = std::filesystem::path(inputfile).extension().string();
-        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return std::tolower(c); });
 
         if (ext != ".npz" && ext != ".bin")
         {
-            std::cout << "Unsupport format!" << std::endl;
-            exit(0);
+            std::cout << "Unsupport format!\n";
+            return 1;
         }
         int num_objects = 0;
-        size_t total_vertices = 0, total_faces = 0;
+        size_t total_vertex_count = 0, total_face_count = 0;
         std::vector<std::vector<std::vector<size_t>>> all_face_indices;
         std::vector<std::vector<TinyVector<double, 3>>> all_vertices;
 
@@ -67,8 +65,8 @@ int main(int argc, char **argv)
             npy::inpzstream input(inputfile);
             if (!input.is_open())
             {
-                std::cerr << "Cannot open the file!" << std::endl;
-                exit(0);
+                std::cerr << "Cannot open the file!\n";
+                return 1;
             }
             num_objects = (int)input.read<std::int64_t>("num_objects.npy")(0);
             // std::cout << "There are " << num_objects << " objects in the input file." << std::endl;
@@ -80,8 +78,8 @@ int main(int argc, char **argv)
                 auto faces_tensor = input.read<int32_t>("faces_" + std::to_string(i) + ".npy");
                 // std::cout << vertices_tensor.shape()[0] << vertices_tensor.shape()[1] << std::endl;
                 // std::cout << faces_tensor.shape()[0] << faces_tensor.shape()[1] << std::endl;
-                total_vertices += vertices_tensor.shape()[0];
-                total_faces += faces_tensor.shape()[0];
+                total_vertex_count += vertices_tensor.shape()[0];
+                total_face_count += faces_tensor.shape()[0];
                 all_face_indices[i].resize(faces_tensor.shape()[0]);
                 all_vertices[i].reserve(vertices_tensor.shape()[0]);
                 for (auto v = 0; v < vertices_tensor.shape()[0]; ++v)
@@ -114,19 +112,19 @@ int main(int argc, char **argv)
             std::ifstream input(inputfile, std::ios::binary);
             if (!input.is_open())
             {
-                std::cerr << "Cannot open the file!" << std::endl;
-                exit(0);
+                std::cerr << "Cannot open the file!\n";
+                return 1;
             }
-            input.read((char *)&num_objects, sizeof(int32_t));
+            input.read(reinterpret_cast<char *>(&num_objects), sizeof(int32_t));
             all_face_indices.resize(num_objects);
             all_vertices.resize(num_objects);
             std::vector<int32_t> vertex_counts(num_objects), face_counts(num_objects);
             for (auto i = 0; i < num_objects; ++i)
             {
-                input.read((char *)&vertex_counts[i], sizeof(int32_t));
-                input.read((char *)&face_counts[i], sizeof(int32_t));
-                total_vertices += vertex_counts[i];
-                total_faces += face_counts[i];
+                input.read(reinterpret_cast<char *>(&vertex_counts[i]), sizeof(int32_t));
+                input.read(reinterpret_cast<char *>(&face_counts[i]), sizeof(int32_t));
+                total_vertex_count += vertex_counts[i];
+                total_face_count += face_counts[i];
             }
             for (auto i = 0; i < num_objects; ++i)
             {
@@ -142,7 +140,7 @@ int main(int argc, char **argv)
                 {
                     all_face_indices[i][f].resize(3);
                     int32_t temp_face[3];
-                    input.read((char *)temp_face, 3 * sizeof(int32_t));
+                    input.read(reinterpret_cast<char *>(temp_face), 3 * sizeof(int32_t));
                     all_face_indices[i][f][0] = static_cast<size_t>(temp_face[0]);
                     all_face_indices[i][f][1] = static_cast<size_t>(temp_face[1]);
                     all_face_indices[i][f][2] = static_cast<size_t>(temp_face[2]);
@@ -155,7 +153,7 @@ int main(int argc, char **argv)
 
         size_t submesh_count = 0;
         std::vector<size_t> face_submesh_ids, total_face_submesh_ids;
-        total_face_submesh_ids.reserve(total_faces);
+        total_face_submesh_ids.reserve(total_face_count);
         for (auto i = 0; i < num_objects; ++i)
         {
             size_t original_face_count = all_face_indices[i].size();
@@ -163,19 +161,19 @@ int main(int argc, char **argv)
             bool nonmanifold_issue = false;
             // save_mesh(all_vertices[i], all_face_indices[i], "mesh_" + std::to_string(i) + ".ply");
             merge_boundary_vertices(all_vertices[i], all_face_indices[i], nonmanifold_issue, true, false);
-            face_submesh_ids.resize(0);
+            face_submesh_ids.clear();
             submesh_count = label_connected_components(all_vertices[i], all_face_indices[i], face_submesh_ids, submesh_count);
             total_face_submesh_ids.insert(total_face_submesh_ids.end(), face_submesh_ids.begin(), face_submesh_ids.end());
             if (all_face_indices[i].size() != original_face_count)
             {
-                std::cout << "face count changes: " << original_face_count << " -> " << all_face_indices[i].size() << std::endl;
-                std::cout << inputfile << std::endl;
+                std::cout << "face count changes: " << original_face_count << " -> " << all_face_indices[i].size() << '\n'
+                          << inputfile << '\n';
                 return 0;
             }
         }
         // std::cout << "Total component: " << submesh_count << std::endl;
         auto out_ext = std::filesystem::path(outputfile).extension().string();
-        std::transform(out_ext.begin(), out_ext.end(), out_ext.begin(), ::tolower);
+        std::transform(out_ext.begin(), out_ext.end(), out_ext.begin(), [](unsigned char c){ return std::tolower(c); });
         if (out_ext == ".npz")
         {
             npy::onpzstream output(outputfile);
@@ -193,8 +191,8 @@ int main(int argc, char **argv)
         {
             std::vector<TinyVector<double, 3>> total_vertices;
             std::vector<std::vector<size_t>> total_faces;
-            total_vertices.reserve(total_vertices.size());
-            total_faces.reserve(total_faces.size());
+            total_vertices.reserve(total_vertex_count);
+            total_faces.reserve(total_face_count);
             std::vector<size_t> new_face;
             new_face.reserve(3);
             for (auto i = 0; i < num_objects; ++i)
@@ -215,14 +213,14 @@ int main(int argc, char **argv)
         }
         else
         {
-            std::cout << "Only *.npz and *.ply files are supported!" << std::endl;
-            exit(0);
+            std::cout << "Only *.npz and *.ply files are supported!\n";
+            return 1;
         }
     }
     catch (const cxxopts::exceptions::exception &e)
     {
-        std::cout << "Error parsing options: " << e.what() << std::endl;
-        exit(0);
+        std::cout << "Error parsing options: " << e.what() << '\n';
+        return 1;
     }
     return 0;
 }

@@ -12,9 +12,9 @@ bool edge_loop_travel(MeshLib::HE_edge<Real> *edge, std::vector<MeshLib::HE_edge
     edge_travel(edge, edge_loop_left, singular_vertex_tag);
     edge_travel(edge->pair, edge_loop_right, singular_vertex_tag);
 
-    edge_loop.resize(0);
+    edge_loop.clear();
     edge_loop.reserve(edge_loop_left.size() + edge_loop_right.size() + 1);
-    for (auto e = edge_loop_right.rbegin(); e != edge_loop_right.rend(); e++)
+    for (auto e = edge_loop_right.rbegin(); e != edge_loop_right.rend(); ++e)
     {
         edge_loop.emplace_back((*e)->pair);
     }
@@ -23,7 +23,7 @@ bool edge_loop_travel(MeshLib::HE_edge<Real> *edge, std::vector<MeshLib::HE_edge
 
     if (tag_complex)
     {
-        for (auto e : edge_loop)
+        for (const auto *e : edge_loop)
             complex_edge_tag[e->id] = complex_edge_tag[e->pair->id] = true;
     }
     return true;
@@ -40,12 +40,12 @@ void edge_travel(MeshLib::HE_edge<Real> *edge, std::vector<MeshLib::HE_edge<Real
         {
             break;
         }
-        if (e->face == 0 || e->pair->face == 0)
+        if (e->face == nullptr || e->pair->face == nullptr)
         {
             auto e2 = e->pair;
             do
             {
-                if (e2 != e->pair && (e2->face == 0 || e2->pair->face == 0))
+                if (e2 != e->pair && (e2->face == nullptr || e2->pair->face == nullptr))
                 {
                     e = e2;
                     break;
@@ -78,9 +78,9 @@ void face_loop_travel(MeshLib::HE_edge<Real> *edge, std::vector<MeshLib::HE_face
     std::vector<MeshLib::HE_face<Real> *> face_loop_left, face_loop_right;
     face_travel(edge, face_loop_right);
     face_travel(edge->pair, face_loop_left);
-    face_loop.resize(0);
+    face_loop.clear();
     face_loop.reserve(face_loop_left.size() + face_loop_right.size());
-    for (auto f = face_loop_left.rbegin(); f != face_loop_left.rend(); f++)
+    for (auto f = face_loop_left.rbegin(); f != face_loop_left.rend(); ++f)
     {
         face_loop.emplace_back(*f);
     }
@@ -94,7 +94,7 @@ void face_travel(MeshLib::HE_edge<Real> *edge, std::vector<MeshLib::HE_face<Real
     do
     {
         auto e_next2 = e->next->next;
-        if (e->tag || e_next2->tag || e->face == 0)
+        if (e->tag || e_next2->tag || e->face == nullptr)
             break;
         face_path.emplace_back(e->face);
         e->tag = e_next2->tag = true;

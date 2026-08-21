@@ -33,8 +33,8 @@ int main(int argc, char **argv)
         auto result = options.parse(argc, argv);
         if (result.count("help"))
         {
-            std::cout << options.help({"", "Group"}) << std::endl;
-            exit(0);
+            std::cout << options.help({"", "Group"}) << '\n';
+            return 0;
         }
 
         bool decompose_and_dump = result.count("o") > 0;
@@ -51,8 +51,7 @@ int main(int argc, char **argv)
             auto inputfile = result["i"].as<std::string>();
             if (!std::filesystem::exists(inputfile))
             {
-                // std::cout << "The input file does not exist!" << std::endl;
-                exit(0);
+                return 0;
             }
 
             MeshLib::Mesh3D<double> *mesh = load_mesh<double>(inputfile);
@@ -60,16 +59,16 @@ int main(int argc, char **argv)
             double normalization_scale = 1;
             if (mesh)
             {
-
                 auto verbose = result["v"].as<bool>();
                 std::vector<MeshLib::Mesh3D<double> *> submeshes;
                 mesh_decomposition(mesh, submeshes);
+                const auto inputfile_stem = std::filesystem::path(inputfile).stem().string();
                 if (decompose_and_dump)
                 {
                     std::filesystem::create_directories(output_dir);
                     if (specified_submesh_id >= 0 && specified_submesh_id < static_cast<int>(submeshes.size()))
                     {
-                        std::string submesh_filename = output_dir + "/" + std::filesystem::path(inputfile).stem().string() + "_submesh_" + std::to_string(specified_submesh_id) + ".ply";
+                        std::string submesh_filename = output_dir + "/" + inputfile_stem + "_submesh_" + std::to_string(specified_submesh_id) + ".ply";
                         if (normalize_submesh)
                             scale_and_PCA(submeshes[specified_submesh_id], inverse_rotation, normalization_center, normalization_scale);
 
@@ -82,7 +81,7 @@ int main(int argc, char **argv)
                         {
                             if (normalize_submesh)
                                 scale_and_PCA(submesh, inverse_rotation, normalization_center, normalization_scale);
-                            std::string submesh_filename = output_dir + "/" + std::filesystem::path(inputfile).stem().string() + "_submesh_" + std::to_string(submesh_id++) + ".ply";
+                            std::string submesh_filename = output_dir + "/" + inputfile_stem + "_submesh_" + std::to_string(submesh_id++) + ".ply";
                             save_mesh<double>(submesh, submesh_filename.c_str());
                         }
                     }
@@ -94,10 +93,10 @@ int main(int argc, char **argv)
                     std::filesystem::create_directories(json_folder);
                 if (dump_complex)
                     std::filesystem::create_directories(output_complex_dir);
-                std::string json_filename = json_folder + "/" + std::filesystem::path(inputfile).stem().string() + "_quadquality.json";
+                std::string json_filename = json_folder + "/" + inputfile_stem + "_quadquality.json";
                 std::ofstream json_off(json_filename);
                 json_off << std::fixed << std::setprecision(6);
-                json_off << "[" << std::endl;
+                json_off << "[\n";
 
                 ptrdiff_t largest_face_num = 0;
                 int largest_submesh_id = -1;
@@ -118,7 +117,7 @@ int main(int argc, char **argv)
                 for (auto submesh : submeshes)
                 {
                     auto pointer = submesh;
-                    if (pointer->is_quad() == false)
+                    if (!pointer->is_quad())
                     {
                         MeshLib::MeshSubdivision<double> subdiv_(submesh);
                         pointer = subdiv_.SplitQuad();
@@ -127,22 +126,18 @@ int main(int argc, char **argv)
 
                     if (dump_complex)
                     {
-                        // std::string complex_edge_obj_filename = output_complex_dir + "/" + std::filesystem::path(inputfile).stem().string() + "_submesh_" + std::to_string(submesh_count) + "_complex_edges.obj";
-                        // quadquality.export_base_complex_edges_as_obj(complex_edge_obj_filename.c_str());
-                        // std::string complex_face_off_filename = output_complex_dir + "/" + std::filesystem::path(inputfile).stem().string() + "_submesh_" + std::to_string(submesh_count) + "_complex_faces.off";
-                        // quadquality.export_base_complex_faces_as_off(complex_face_off_filename.c_str());
                         if (!dump_largest_only)
                         {
-                            std::string complex_edge_ply_filename = output_complex_dir + "/" + std::filesystem::path(inputfile).stem().string() + "_submesh_" + std::to_string(submesh_count) + "_complex_edges.ply";
+                            std::string complex_edge_ply_filename = output_complex_dir + "/" + inputfile_stem + "_submesh_" + std::to_string(submesh_count) + "_complex_edges.ply";
                             quadquality.export_base_complex_edges_as_ply(complex_edge_ply_filename.c_str());
-                            std::string complex_face_ply_filename = output_complex_dir + "/" + std::filesystem::path(inputfile).stem().string() + "_submesh_" + std::to_string(submesh_count) + "_complex_faces.ply";
+                            std::string complex_face_ply_filename = output_complex_dir + "/" + inputfile_stem + "_submesh_" + std::to_string(submesh_count) + "_complex_faces.ply";
                             quadquality.export_base_complex_faces_as_ply(complex_face_ply_filename.c_str());
                         }
                         else if (submesh_count == largest_submesh_id)
                         {
-                            std::string complex_edge_ply_filename = output_complex_dir + "/" + std::filesystem::path(inputfile).stem().string() + "_complex_edges.ply";
+                            std::string complex_edge_ply_filename = output_complex_dir + "/" + inputfile_stem + "_complex_edges.ply";
                             quadquality.export_base_complex_edges_as_ply(complex_edge_ply_filename.c_str());
-                            std::string complex_face_ply_filename = output_complex_dir + "/" + std::filesystem::path(inputfile).stem().string() + "_complex_faces.ply";
+                            std::string complex_face_ply_filename = output_complex_dir + "/" + inputfile_stem + "_complex_faces.ply";
                             quadquality.export_base_complex_faces_as_ply(complex_face_ply_filename.c_str());
                         }
                     }
@@ -171,7 +166,7 @@ int main(int argc, char **argv)
                     if (verbose)
                     {
                         std::cout << "area_ratio: max " << max_area_ratio << ", min " << min_area_ratio << ", mean " << mean_area_ratio
-                                  << "; min_edge_length: " << min_edge_length / size << std::endl;
+                                  << "; min_edge_length: " << min_edge_length / size << '\n';
                         static bool header_printed = false;
                         if (!header_printed)
                         {
@@ -190,7 +185,7 @@ int main(int argc, char **argv)
                                       << std::setw(12) << "#Faces"
                                       << std::setw(14) << "#Boundaries"
                                       << std::setw(8) << "#Genus"
-                                      << std::endl;
+                                      << '\n';
                             header_printed = true;
                         }
                         std::cout << termcolor::reset;
@@ -208,30 +203,29 @@ int main(int argc, char **argv)
                                   << std::setw(12) << pointer->get_num_of_faces()
                                   << std::setw(14) << pointer->get_num_of_boundaries()
                                   << std::setw(8) << pointer->genus()
-                                  << std::endl;
+                                  << '\n';
                     }
 
-                    json_off << "{" << std::endl;
-                    json_off << "\"submesh_id\": " << submesh_count << "," << std::endl;
-                    json_off << "\"FratioN\": " << fratio_new << "," << std::endl;
-                    json_off << "\"EratioN\": " << eratio_new << "," << std::endl;
-                    json_off << "\"Fspiral\": " << fsprial_ratio << "," << std::endl;
-                    json_off << "\"Espiral\": " << esprial_ratio << "," << std::endl;
-                    json_off << "\"Fratio\": " << fratio << "," << std::endl;
-                    json_off << "\"Eratio\": " << eratio << "," << std::endl;
-                    json_off << "\"NumOfComplex\": " << quadquality.get_num_of_complex() << "," << std::endl;
-                    json_off << "\"NumOfIrregularVertices\": " << quadquality.get_irregular_vertex_num() << "," << std::endl;
-                    json_off << "\"NumOfVertices\": " << pointer->get_num_of_vertices() << "," << std::endl;
-                    // json_off << "\"NumOfEdges\": " << pointer->get_num_of_edges() << "," << std::endl;
-                    json_off << "\"NumOfFaces\": " << pointer->get_num_of_faces() << "," << std::endl;
-                    json_off << "\"NumOfBoundaries\": " << pointer->get_num_of_boundaries() << "," << std::endl;
-                    json_off << "\"SJ\": " << quadquality.get_mean_scaled_jacobian() << "," << std::endl;
-                    json_off << "\"Genus\": " << pointer->genus() << std::endl;
+                    json_off << "{\n";
+                    json_off << "\"submesh_id\": " << submesh_count << ",\n";
+                    json_off << "\"FratioN\": " << fratio_new << ",\n";
+                    json_off << "\"EratioN\": " << eratio_new << ",\n";
+                    json_off << "\"Fspiral\": " << fsprial_ratio << ",\n";
+                    json_off << "\"Espiral\": " << esprial_ratio << ",\n";
+                    json_off << "\"Fratio\": " << fratio << ",\n";
+                    json_off << "\"Eratio\": " << eratio << ",\n";
+                    json_off << "\"NumOfComplex\": " << quadquality.get_num_of_complex() << ",\n";
+                    json_off << "\"NumOfIrregularVertices\": " << quadquality.get_irregular_vertex_num() << ",\n";
+                    json_off << "\"NumOfVertices\": " << pointer->get_num_of_vertices() << ",\n";
+                    json_off << "\"NumOfFaces\": " << pointer->get_num_of_faces() << ",\n";
+                    json_off << "\"NumOfBoundaries\": " << pointer->get_num_of_boundaries() << ",\n";
+                    json_off << "\"SJ\": " << quadquality.get_mean_scaled_jacobian() << ",\n";
+                    json_off << "\"Genus\": " << pointer->genus() << '\n';
 
                     if (submesh_count + 1 < submeshes.size())
-                        json_off << "}," << std::endl;
+                        json_off << "},\n";
                     else
-                        json_off << "}" << std::endl;
+                        json_off << "}\n";
 
                     submesh_count++;
 
@@ -240,15 +234,15 @@ int main(int argc, char **argv)
                     delete submesh;
                 }
 
-                json_off << "]" << std::endl;
+                json_off << "]\n";
                 json_off.close();
             }
         }
     }
     catch (const cxxopts::exceptions::exception &e)
     {
-        std::cout << "Error parsing options: " << e.what() << std::endl;
-        exit(1);
+        std::cout << "Error parsing options: " << e.what() << '\n';
+        return 1;
     }
     return 0;
 }

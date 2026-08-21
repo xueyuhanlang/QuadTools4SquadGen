@@ -2,13 +2,7 @@
 
 #include "cxxopts.hpp"
 #include "blockgen.h"
-
-inline std::string GetFileExtension(const std::string &FileName)
-{
-    if (FileName.find_last_of(".") != std::string::npos)
-        return FileName.substr(FileName.find_last_of(".") + 1);
-    return "";
-}
+#include "myutils.h"
 
 int main(int argc, char **argv)
 {
@@ -33,27 +27,27 @@ int main(int argc, char **argv)
         auto result = options.parse(argc, argv);
         if (result.count("help"))
         {
-            std::cout << options.help({"", "Group"}) << std::endl;
-            exit(0);
+            std::cout << options.help({"", "Group"}) << '\n';
+            return 0;
         }
 
         if (result.count("o"))
         {
-            auto filename = result["o"].as<std::string>();
-            auto block_num = std::max(1, result["b"].as<int>());
-            auto resolution = std::max(1, result["r"].as<int>());
-            auto subdiv_level = std::max(1, result["l"].as<int>());
-            auto scale_range = fabs(result["s"].as<float>());
+            auto filename      = result["o"].as<std::string>();
+            auto block_num     = std::max(1, result["b"].as<int>());
+            auto resolution    = std::max(1, result["r"].as<int>());
+            auto subdiv_level  = std::max(1, result["l"].as<int>());
+            auto scale_range   = std::fabs(result["s"].as<float>());
             auto perturb_level = result["p"].as<float>();
-            auto seed = result["seed"].as<int>();
+            auto seed          = result["seed"].as<int>();
             auto use_cc_subdiv = result["c"].as<bool>();
 
             blockgen_3d blockgen(block_num, resolution, use_cc_subdiv, subdiv_level, perturb_level, scale_range, seed);
 
-            int mesh_genus = blockgen.get_genus();
-            std::cout << "Mesh genus: " << mesh_genus << std::endl;
+            const int mesh_genus = blockgen.get_genus();
+            std::cout << "Mesh genus: " << mesh_genus << '\n';
 
-            auto ext = GetFileExtension(filename);
+            const auto ext = GetFileExtension(filename);
             if (ext == "ply")
                 blockgen.export_ply(filename);
             else
@@ -62,8 +56,8 @@ int main(int argc, char **argv)
     }
     catch (const cxxopts::exceptions::exception &e)
     {
-        std::cout << "Error parsing options: " << e.what() << std::endl;
-        exit(1);
+        std::cout << "Error parsing options: " << e.what() << '\n';
+        return 1;
     }
     return 0;
 }

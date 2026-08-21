@@ -34,7 +34,7 @@ namespace ig
         template <typename T>
         class AABB
         {
-            typedef TinyVector<T, 3> Vector;
+            using Vector = TinyVector<T, 3>;
 
         public:
             AABB();
@@ -65,7 +65,7 @@ namespace ig
         template <typename T>
         class AABBNode
         {
-            typedef TinyVector<T, 3> Vector;
+            using Vector = TinyVector<T, 3>;
 
         public:
             AABBNode(const std::vector<Vector> &vertexList, const std::vector<ptrdiff_t> &face_id_list, AABBTreeInfo &treeInfo, int depth);
@@ -92,8 +92,8 @@ namespace ig
     class AABB_Tree
     {
     public:
-        typedef T Real;
-        typedef TinyVector<T, 3> Vector;
+        using Real   = T;
+        using Vector = TinyVector<T, 3>;
         AABB_Tree(const std::vector<Vector> &vertices_list);
         ~AABB_Tree();
         void find_Nearest_Point(const Vector &p, Vector &nearestP, ptrdiff_t *face_ID = nullptr);

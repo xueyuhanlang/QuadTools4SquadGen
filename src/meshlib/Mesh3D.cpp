@@ -1,5 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #include "Mesh3D.h"
 #include <list>
 
@@ -10,9 +8,9 @@ namespace MeshLib
 	Mesh3D<Real>::Mesh3D(void)
 	{
 		//initialization
-		vertices_list = NULL;
-		faces_list = NULL;
-		edges_list = NULL;
+		vertices_list = nullptr;
+		faces_list = nullptr;
+		edges_list = nullptr;
 
 		xmax = ymax = zmax = (Real)1.0;
 		xmin = ymin = zmin = (Real) - 1.0;
@@ -41,58 +39,64 @@ namespace MeshLib
 		clear_vertices();
 		clear_edges();
 		clear_faces();
-		normal_array.resize(0);
-		texture_array.resize(0);
+		normal_array.clear();
+		texture_array.clear();
 	}
 	//////////////////////////////////////////////////////////////////////////
 	template <typename Real>
 	void Mesh3D<Real>::clear_vertices()
 	{
-		if (vertices_list == NULL)
+		if (!vertices_list)
 		{ return; }
 
-		for (VERTEX_ITER viter = vertices_list->begin(); viter != vertices_list->end(); viter++)
-		{ delete *viter; }
+		for (auto *vertex : *vertices_list)
+		{
+			delete vertex;
+		}
 
 		delete vertices_list;
-		vertices_list = NULL;
+		vertices_list = nullptr;
 	}
 	//////////////////////////////////////////////////////////////////////////
 	template <typename Real>
 	void Mesh3D<Real>::clear_edges()
 	{
 		m_edgemap.clear();
-		if (edges_list == NULL)
+		if (!edges_list)
 		{ return; }
 
-		for (EDGE_ITER eiter = edges_list->begin(); eiter != edges_list->end(); eiter++)
-		{ delete *eiter; }
+		for (auto *edge : *edges_list)
+		{
+			delete edge;
+		}
 
 		delete edges_list;
-		edges_list = NULL;
+		edges_list = nullptr;
 	}
 	//////////////////////////////////////////////////////////////////////////
 	template <typename Real>
 	void Mesh3D<Real>::clear_faces()
 	{
-		if (faces_list == NULL)
+		if (!faces_list)
 		{ return; }
 
-		for (FACE_ITER fiter = faces_list->begin(); fiter != faces_list->end(); fiter++)
-		{ delete *fiter; }
+		for (auto *face : *faces_list)
+		{
+			delete face;
+		}
 
 		delete faces_list;
-		faces_list = NULL;
+		faces_list = nullptr;
 	}
 	//////////////////////////////////////////////////////////////////////////
 	template <typename Real>
 	HE_vert<Real> *Mesh3D<Real>::insert_vertex(const TinyVector<Real, 3> &v)
 	{
 		HE_vert<Real> *hv = new HE_vert<Real>(v);
-		if (vertices_list == NULL)
+		if (!vertices_list)
 		{ vertices_list = new VERTEX_LIST; }
 
-		hv->id = (ptrdiff_t)vertices_list->size();
+		hv->id = static_cast<ptrdiff_t>(vertices_list->size());
 		vertices_list->push_back(hv);
 
 		return hv;
@@ -101,9 +105,9 @@ namespace MeshLib
 	template <typename Real>
 	HE_face<Real> *Mesh3D<Real>::insert_face(VERTEX_LIST &vec_hv, std::vector<ptrdiff_t> *texture, std::vector<ptrdiff_t> *normal)
 	{
-		int vsize = (int)vec_hv.size();
+		const int vsize = static_cast<int>(vec_hv.size());
 		if (vsize < 3)
-		{ return NULL; }
+		{ return nullptr; }
 
 		//////////////////////////////////////////////////////////////////////////
 		//detect non-manifold
@@ -124,63 +128,37 @@ namespace MeshLib
 		if (b_find)
 		{
 			// std::cout << "skip a face due to encounting nonmainfold edges" << std::endl;
-			return 0;
-		}
-
-		if (b_find)
-		{
-			m_encounter_non_manifold = true;
-
-			//guess there are faces with reverse orientation, try to reverse them.
-			//If these faces are inserted after their neighbor faces which have correct orientation,
-			//probably we can obtain correct meshes.
-			for (int i = 0; i < vsize; i++)
-			{
-				HE_edge<Real> *c_he = m_edgemap[PAIR_VERTEX(vec_hv[(i + 1) % vsize], vec_hv[i])];
-				if (c_he && c_he->face)
-				{
-					return NULL;
-				}
-			}
-			//it seems fine, reverse the vector.
-			std::reverse(vec_hv.begin(), vec_hv.end());
-			if (texture)
-			{
-				std::reverse(texture->begin(), texture->end());
-			}
-			if (normal)
-			{
-				std::reverse(normal->begin(), normal->end());
-			}
+			return nullptr;
 		}
 
 		//////////////////////////////////////////////////////////////////////////
 
-		if (faces_list == NULL)
+		if (!faces_list)
 		{ faces_list = new FACE_LIST; }
 
 		HE_face<Real> *hf = new HE_face<Real>;
 		hf->valence = vsize;
 		VERTEX_ITER viter = vec_hv.begin();
 		VERTEX_ITER nviter = vec_hv.begin();
-		nviter++;
+		++nviter;
 
-		HE_edge<Real> *he1, *he2;
+		HE_edge<Real> *he1 = nullptr;
+		HE_edge<Real> *he2 = nullptr;
 		std::vector<HE_edge<Real>* > v_he;
-		int i;
-		for (i = 0; i < vsize - 1; i++)
+		for (int i = 0; i < vsize - 1; ++i)
 		{
 			he1 = insert_edge( *viter, *nviter);
 			he2 = insert_edge( *nviter, *viter);
 
-			if (hf->edge == NULL)
+			if (hf->edge == nullptr)
 			{ hf->edge = he1; }
 
 			he1->face = hf;
 			he1->pair = he2;
 			he2->pair = he1;
 			v_he.push_back(he1);
-			viter++, nviter++;
+			++viter;
+			++nviter;
 		}
 
 		nviter = vec_hv.begin();
@@ -188,14 +166,15 @@ namespace MeshLib
 		he1 = insert_edge(*viter, *nviter);
 		he2 = insert_edge(*nviter , *viter);
 		he1->face = hf;
-		if (hf->edge == NULL)
+		if (hf->edge == nullptr)
 		{ hf->edge = he1; }
 
 		he1->pair = he2;
 		he2->pair = he1;
 		v_he.push_back(he1);
 
-		for (i = 0; i < vsize - 1; i++)
+		int i = 0;
+		for (; i < vsize - 1; ++i)
 		{
 			v_he[i]->next = v_he[i + 1];
 			v_he[i + 1]->prev = v_he[i];
@@ -203,7 +182,7 @@ namespace MeshLib
 		v_he[i]->next = v_he[0];
 		v_he[0]->prev = v_he[i];
 
-		hf->id = (int)faces_list->size();
+		hf->id = static_cast<int>(faces_list->size());
 		faces_list->push_back(hf);
 
 		if (texture)
@@ -223,15 +202,15 @@ namespace MeshLib
 	template <typename Real>
 	HE_edge<Real> *Mesh3D<Real>::insert_edge(HE_vert<Real> *vstart, HE_vert<Real> *vend)
 	{
-		if (vstart == NULL || vend == NULL)
+		if (vstart == nullptr || vend == nullptr)
 		{
-			return NULL;
+			return nullptr;
 		}
 
-		if (edges_list == NULL)
+		if (!edges_list)
 		{ edges_list = new EDGE_LIST; }
 
-		if( m_edgemap[PAIR_VERTEX(vstart, vend)] != NULL )
+		if (m_edgemap[PAIR_VERTEX(vstart, vend)] != nullptr)
 		{ return m_edgemap[PAIR_VERTEX(vstart, vend)]; }
 
 		HE_edge<Real> *he = new HE_edge<Real>;
@@ -241,7 +220,7 @@ namespace MeshLib
 		vstart->edge = he;
 		m_edgemap[PAIR_VERTEX(vstart, vend)] = he;
 
-		he->id = (int)edges_list->size();
+		he->id = static_cast<int>(edges_list->size());
 		edges_list->push_back(he);
 
 		return he;
@@ -253,17 +232,17 @@ namespace MeshLib
 		if (!is_valid())
 		{ return; }
 
-		EDGE_ITER eiter = edges_list->begin();
+		auto eiter = edges_list->begin();
 
 		for (; eiter != edges_list->end(); eiter++)
 		{
-			if ((*eiter)->next == NULL && (*eiter)->face == NULL)
+			if ((*eiter)->next == nullptr && (*eiter)->face == nullptr)
 			{ (*eiter)->pair->vert->edge = *eiter; }
 		}
 
 		for (eiter = edges_list->begin(); eiter != edges_list->end(); eiter++)
 		{
-			if ( (*eiter)->next == NULL )
+			if ((*eiter)->next == nullptr)
 			{
 				HE_vert<Real> *hv = (*eiter)->vert;
 				if (hv->edge != (*eiter)->pair)
@@ -276,12 +255,12 @@ namespace MeshLib
 	}
 	//////////////////////////////////////////////////////////////////////////
 	template <typename Real>
-	bool Mesh3D<Real>::is_on_boundary(HE_vert<Real> *hv)
+	bool Mesh3D<Real>::is_on_boundary(HE_vert<Real> *hv) const
 	{
 		HE_edge<Real> *edge = hv->edge;
 		do
 		{
-			if (edge == NULL || edge->pair->face == NULL || edge->face == NULL)
+			if (edge == nullptr || edge->pair->face == nullptr || edge->face == nullptr)
 			{ return true; }
 
 			edge = edge->pair->next;
@@ -292,7 +271,7 @@ namespace MeshLib
 	}
 	//////////////////////////////////////////////////////////////////////////
 	template <typename Real>
-	bool Mesh3D<Real>::is_on_boundary(HE_face<Real> *hf)
+	bool Mesh3D<Real>::is_on_boundary(HE_face<Real> *hf) const
 	{
 		HE_edge<Real> *edge = hf->edge;
 
@@ -308,9 +287,9 @@ namespace MeshLib
 	}
 	//////////////////////////////////////////////////////////////////////////
 	template <typename Real>
-	bool Mesh3D<Real>::is_on_boundary(HE_edge<Real> *he)
+	bool Mesh3D<Real>::is_on_boundary(HE_edge<Real> *he) const
 	{
-		if(he->face == NULL || he->pair->face == NULL)
+		if (he->face == nullptr || he->pair->face == nullptr)
 		{ return true; }
 		return false;
 	}
@@ -452,7 +431,7 @@ namespace MeshLib
 			}
 			
 			// Pre-allocate vertices list
-			if (vertices_list == NULL) {
+			if (!vertices_list) {
 				vertices_list = new VERTEX_LIST;
 			}
 			vertices_list->reserve(vsize);
@@ -490,7 +469,7 @@ namespace MeshLib
 			}
 			
 			// Pre-allocate faces list
-			if (faces_list == NULL) {
+			if (!faces_list) {
 				faces_list = new FACE_LIST;
 			}
 			faces_list->reserve(fsize);
@@ -551,7 +530,7 @@ namespace MeshLib
 						}
 					}
 					
-					if (!found && hv != NULL) {
+					if (!found && hv != nullptr) {
 						v_list.push_back(hv);
 					}
 				}
@@ -580,7 +559,9 @@ namespace MeshLib
 		fout.precision(16);
 		fout << "OFF\n";
 		//output the number of vertices_list, faces_list-> edges_list
-		fout << (int)vertices_list->size() << " " << (int)faces_list->size() << " " << (int)edges_list->size() / 2 << "\n";
+		fout << static_cast<int>(vertices_list->size()) << " "
+			<< static_cast<int>(faces_list->size()) << " "
+			<< static_cast<int>(edges_list->size()) / 2 << "\n";
 
 		//output coordinates of each vertex
 		VERTEX_ITER viter = vertices_list->begin();
@@ -637,10 +618,10 @@ namespace MeshLib
 			size_t vertex_estimate = size / 40; // Rough estimate
 			size_t face_estimate = size / 50;   // Rough estimate
 			
-			if (vertices_list == NULL) vertices_list = new VERTEX_LIST;
+			if (!vertices_list) vertices_list = new VERTEX_LIST;
 			vertices_list->reserve(vertex_estimate);
 			
-			if (faces_list == NULL) faces_list = new FACE_LIST;
+			if (!faces_list) faces_list = new FACE_LIST;
 			faces_list->reserve(face_estimate);
 			
 			// Parse buffer line by line
@@ -704,7 +685,7 @@ namespace MeshLib
 							}
 							}
 							
-							if (!found && hv != NULL) {
+							if (!found && hv != nullptr) {
 								s_faceid.push_back(hv);
 							}
 						}
@@ -899,9 +880,9 @@ namespace MeshLib
 	template <typename Real>
 	void Mesh3D<Real>::compute_faces_list_normal()
 	{
-		for (FACE_ITER fiter = faces_list->begin(); fiter != faces_list->end(); fiter++)
+		for (auto *face : *faces_list)
 		{
-			compute_perface_normal(*fiter);
+			compute_perface_normal(face);
 		}
 	}
 	//////////////////////////////////////////////////////////////////////////
@@ -937,11 +918,9 @@ namespace MeshLib
 	template <typename Real>
 	void Mesh3D<Real>::compute_vertices_list_normal()
 	{
-		VERTEX_ITER viter = vertices_list->begin();
-
-		for (; viter != vertices_list->end(); viter++)
+		for (auto *vertex : *vertices_list)
 		{
-			compute_pervertex_normal(*viter);
+			compute_pervertex_normal(vertex);
 		}
 	}
 	//////////////////////////////////////////////////////////////////////////
@@ -950,7 +929,7 @@ namespace MeshLib
 	{
 		HE_edge<Real> *edge = hv->edge;
 
-		if (edge == NULL)
+		if (edge == nullptr)
 		{
 			hv->normal = TinyVector<Real, 3>(0, 0, 0);
 			return;
@@ -959,7 +938,7 @@ namespace MeshLib
 
 		do
 		{
-			if (edge->face != NULL)
+			if (edge->face != nullptr)
 			{
 				hv->normal += edge->face->normal;
 			}
@@ -1011,7 +990,7 @@ namespace MeshLib
 			}
 			while(edge != hf->edge);
 
-			new_mesh->insert_face(mvlist, hf->texture_indices.empty() ? 0 : &hf->texture_indices, hf->normal_indices.empty() ? 0 : &hf->normal_indices);
+			new_mesh->insert_face(mvlist, hf->texture_indices.empty() ? nullptr : &hf->texture_indices, hf->normal_indices.empty() ? nullptr : &hf->normal_indices);
 		}
 
 		for (EDGE_ITER eiter = edges_list->begin(); eiter != edges_list->end(); eiter++)
@@ -1107,7 +1086,7 @@ namespace MeshLib
 					HE_edge<Real> *he = pFacet->edge;
 					do
 					{
-						if(he->pair->face != NULL && he->pair->face->tag == false)
+						if (he->pair->face != nullptr && he->pair->face->tag == false)
 						{
 							facets.push(he->pair->face);
 							he->pair->face->tag = true;
@@ -1216,7 +1195,7 @@ namespace MeshLib
 		ptrdiff_t e = get_num_of_edges() / 2;
 		ptrdiff_t f = get_num_of_faces();
 
-		m_genus = (int)(2 * c + e - b - f - v) / 2;
+		m_genus = static_cast<int>(2 * c + e - b - f - v) / 2;
 	}
 	//////////////////////////////////////////////////////////////////////////
 	template <typename Real>
@@ -1226,7 +1205,7 @@ namespace MeshLib
 		VERTEX_ITER viter = vertices_list->begin();
 		for (; viter != vertices_list->end(); viter++)
 		{
-			if ((*viter)->edge == NULL)
+			if ((*viter)->edge == nullptr)
 			{
 				find = true;
 				break;
@@ -1239,7 +1218,7 @@ namespace MeshLib
 			int i = 0;
 			for (viter = vertices_list->begin(); viter != vertices_list->end(); viter++)
 			{
-				if ((*viter)->edge != NULL)
+				if ((*viter)->edge != nullptr)
 				{
 					new_vertices_list->push_back(*viter);
 					(*viter)->id = i;
@@ -1255,7 +1234,7 @@ namespace MeshLib
 			i = 0;
 			for (EDGE_ITER eiter = edges_list->begin(); eiter != edges_list->end(); eiter++)
 			{
-				if ((*eiter)->face != NULL || (*eiter)->pair->face != NULL)
+				if ((*eiter)->face != nullptr || (*eiter)->pair->face != nullptr)
 				{
 					new_edges_list->push_back(*eiter);
 					(*eiter)->id = i;
@@ -1272,25 +1251,28 @@ namespace MeshLib
 	template <typename Real>
 	void Mesh3D<Real>::reset_vertices_tag(bool tag_status)
 	{
-		VERTEX_ITER viter = vertices_list->begin();
-		for (; viter != vertices_list->end(); viter++)
-		{ (*viter)->tag = tag_status; }
+		for (auto *vertex : *vertices_list)
+		{
+			vertex->tag = tag_status;
+		}
 	}
 	//////////////////////////////////////////////////////////////////////////
 	template <typename Real>
 	void Mesh3D<Real>::reset_faces_tag(bool tag_status)
 	{
-		FACE_ITER fiter = faces_list->begin();
-		for (; fiter != faces_list->end(); fiter++)
-		{ (*fiter)->tag = tag_status; }
+		for (auto *face : *faces_list)
+		{
+			face->tag = tag_status;
+		}
 	}
 	//////////////////////////////////////////////////////////////////////////
 	template <typename Real>
 	void Mesh3D<Real>::reset_edges_tag(bool tag_status)
 	{
-		EDGE_ITER eiter = edges_list->begin();
-		for (; eiter != edges_list->end(); eiter++)
-		{ (*eiter)->tag = tag_status; }
+		for (auto *edge : *edges_list)
+		{
+			edge->tag = tag_status;
+		}
 	}
 	//////////////////////////////////////////////////////////////////////////
 	template <typename Real>
@@ -1304,10 +1286,8 @@ namespace MeshLib
 	template <typename Real>
 	void Mesh3D<Real>::translate(const TinyVector<Real, 3> &tran_V)
 	{
-		VERTEX_ITER viter = vertices_list->begin();
-		for (; viter != vertices_list->end(); viter++)
+		for (auto *hv : *vertices_list)
 		{
-			HE_vert<Real> *hv = *viter;
 			hv->pos += tran_V;
 		}
 	}
@@ -1315,10 +1295,8 @@ namespace MeshLib
 	template <typename Real>
 	void Mesh3D<Real>::scale(Real factorx, Real factory, Real factorz)
 	{
-		VERTEX_ITER viter = vertices_list->begin();
-		for (; viter != vertices_list->end(); viter++)
+		for (auto *hv : *vertices_list)
 		{
-			HE_vert<Real> *hv = *viter;
 			hv->pos[0] *= factorx;
 			hv->pos[1] *= factory;
 			hv->pos[2] *= factorz;
@@ -1329,10 +1307,8 @@ namespace MeshLib
 	void Mesh3D<Real>::init_edge_tag()
 	{
 		reset_edges_tag(false);
-		EDGE_ITER eiter = edges_list->begin();
-		for (; eiter != edges_list->end(); eiter++)
+		for (auto *he : *edges_list)
 		{
-			HE_edge<Real> *he = *eiter;
 			if (he->tag == false && he->pair->tag == false)
 			{
 				he->tag = true;
@@ -1343,7 +1319,7 @@ namespace MeshLib
 	template <typename Real>
 	void Mesh3D<Real>::swap_edge(HE_edge<Real> *triedge, bool update_vertex_normal)
 	{
-		if (triedge == NULL || triedge->face == NULL || triedge->pair->face == NULL || triedge->face->valence != 3 || triedge->pair->face->valence != 3)
+		if (triedge == nullptr || triedge->face == nullptr || triedge->pair->face == nullptr || triedge->face->valence != 3 || triedge->pair->face->valence != 3)
 		{
 			return;
 		}
@@ -1426,5 +1402,3 @@ namespace MeshLib
 
 template class MeshLib::Mesh3D<double>;
 // template class MeshLib::Mesh3D<float>;
-
-#undef _CRT_SECURE_NO_WARNINGS

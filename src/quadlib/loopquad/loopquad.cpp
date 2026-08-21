@@ -68,20 +68,20 @@ template <typename Real>
 MeshLib::Mesh3D<Real> *LoopQuadProcessing(MeshLib::Mesh3D<Real> *input_mesh, const Real loop_threshold, bool debug, bool subdiv, int min_face_num)
 {
     if (!input_mesh || input_mesh->get_num_of_faces() < min_face_num)
-        return 0;
+        return nullptr;
 
     if (debug)
     {
         std::cout << "Input mesh: " << input_mesh->get_num_of_vertices() << " vertices, "
                   << input_mesh->get_num_of_faces() << " faces, "
-                  << input_mesh->get_num_of_edges() << " edges." << std::endl;
+                  << input_mesh->get_num_of_edges() << " edges.\n";
     }
 
     // mesh decomposition
     std::vector<MeshLib::Mesh3D<Real> *> submeshes;
     mesh_decomposition(input_mesh, submeshes);
     if (submeshes.empty())
-        return 0;
+        return nullptr;
     MeshLib::Mesh3D<Real> *merged_mesh = new MeshLib::Mesh3D<Real>;
 
     ptrdiff_t num_vertices = 0;
@@ -97,7 +97,7 @@ MeshLib::Mesh3D<Real> *LoopQuadProcessing(MeshLib::Mesh3D<Real> *input_mesh, con
         std::unordered_set<MeshLib::Mesh3D<Real> *> intermediate_meshes;
         intermediate_meshes.insert(submesh);
 
-        MeshLib::Mesh3D<Real> *m_pmesh = 0;
+        MeshLib::Mesh3D<Real> *m_pmesh = nullptr;
 
         // merge
         if (submesh->is_tri())
@@ -121,13 +121,13 @@ MeshLib::Mesh3D<Real> *LoopQuadProcessing(MeshLib::Mesh3D<Real> *input_mesh, con
                         if (m_pmesh && !m_pmesh->is_quad())
                         {
                             delete m_pmesh;
-                            m_pmesh = 0;
+                            m_pmesh = nullptr;
                             BlossomMerger<Real> merger(submesh);
                             m_pmesh = merger.get_merged_mesh();
                             if (m_pmesh && (m_pmesh->get_num_of_faces() == 0 || (debug == false && !m_pmesh->is_quad())))
                             {
                                 delete m_pmesh;
-                                m_pmesh = 0;
+                                m_pmesh = nullptr;
                             }
                         }
                     }
@@ -136,7 +136,7 @@ MeshLib::Mesh3D<Real> *LoopQuadProcessing(MeshLib::Mesh3D<Real> *input_mesh, con
                         if (m_pmesh)
                         {
                             delete m_pmesh;
-                            m_pmesh = 0;
+                            m_pmesh = nullptr;
                         }
                     }
                 }
@@ -182,9 +182,8 @@ MeshLib::Mesh3D<Real> *LoopQuadProcessing(MeshLib::Mesh3D<Real> *input_mesh, con
                 else
                 {
                     auto &bbox_info = it->second;
-                    for (size_t i = 0; i < bbox_info.size(); i++)
+                    for (const auto &msize : bbox_info)
                     {
-                        const auto &msize = bbox_info[i];
                         auto diff = msize - size;
                         auto max_diff = std::max({fabs(diff[0]), fabs(diff[1]), fabs(diff[2])});
                         auto max_side = std::max({fabs(msize[0]), fabs(msize[1]), fabs(msize[2])}) + 1.0e-12;
@@ -215,7 +214,7 @@ MeshLib::Mesh3D<Real> *LoopQuadProcessing(MeshLib::Mesh3D<Real> *input_mesh, con
         if (!skip_flag)
         {
             // check loop quality
-            MeshLib::Mesh3D<Real> *subdiv_mesh = 0;
+            MeshLib::Mesh3D<Real> *subdiv_mesh = nullptr;
             if (!m_pmesh->is_quad())
             {
                 MeshLib::MeshSubdivision<Real> subdiv_(m_pmesh);
@@ -232,15 +231,18 @@ MeshLib::Mesh3D<Real> *LoopQuadProcessing(MeshLib::Mesh3D<Real> *input_mesh, con
                 QuadQuality<Real> quality(subdiv_mesh, false);
                 // Real fr = quality.get_simple_faceloop_ratio(), er = quality.get_simple_edgeloop_ratio();
                 Real fr = quality.get_simple_faceloop_ratio_new(), er = quality.get_simple_edgeloop_ratio_new();
-                Real loop_ratio = std::min(fr, er); // quality.get_simple_score();
-                // Real loop_ratio = std::max(fr, er); // quality.get_simple_score();
+                Real loop_ratio = std::min(fr, er); // quality.get_simple_score();                
                 // std::cout << quality.get_num_of_complex() << std::endl;
-                Real max_area_ratio, min_area_ratio, mean_area_ratio, min_edge_length;
-                quality.get_complex_distribution(max_area_ratio, min_area_ratio, mean_area_ratio, min_edge_length);
-                if (quality.get_num_of_complex() > 1024 || fr < loop_threshold ||min_area_ratio < (Real)1.0/1024 || min_edge_length < (Real)1.0/32) 
-                {
-                    skip_flag = true;
-                }
+                // std::cout<< loop_ratio << " " << loop_threshold << std::endl;
+                // Real max_area_ratio, min_area_ratio, mean_area_ratio, min_edge_length;
+                // quality.get_complex_distribution(max_area_ratio, min_area_ratio, mean_area_ratio, min_edge_length);
+                // if (quality.get_num_of_complex() > 1024 || fr < loop_threshold ||min_area_ratio < (Real)1.0/1024 || min_edge_length < (Real)1.0/32) 
+                // {
+                //     skip_flag = true;
+                // }
+                // std::cout << min_area_ratio << " " << (Real)1.0/1024 << std::endl;
+                // std::cout << min_edge_length << " " << (Real)1.0/32 << std::endl;
+                // std::cout << (skip_flag ? "skip" : "accept") << std::endl;
                 // if (loop_ratio < loop_threshold) //|| quality.get_num_of_complex() > 4096)
                     // skip_flag = true;
             }
@@ -251,20 +253,21 @@ MeshLib::Mesh3D<Real> *LoopQuadProcessing(MeshLib::Mesh3D<Real> *input_mesh, con
             if (debug == false || (debug && !m_pmesh->is_quad()))
             {
                 // std::cout << "**********************" << std::endl;
-                for (int i = 0; i < m_pmesh->get_num_of_vertices(); i++)
+                for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_vertices(); ++i)
                 {
                     auto vert = m_pmesh->get_vertex(i);
                     merged_mesh->insert_vertex(vert->pos);
                 }
 
-                for (int i = 0; i < m_pmesh->get_num_of_faces(); i++)
+                for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_faces(); ++i)
                 {
                     auto face = m_pmesh->get_face(i);
                     std::vector<MeshLib::HE_vert<Real> *> face_vert;
+                    face_vert.reserve(face->valence);
                     auto he = face->edge;
                     do
                     {
-                        face_vert.push_back(merged_mesh->get_vertex(he->vert->id + num_vertices));
+                        face_vert.emplace_back(merged_mesh->get_vertex(he->vert->id + num_vertices));
                         he = he->next;
                     } while (he != face->edge);
                     merged_mesh->insert_face(face_vert);
@@ -283,7 +286,7 @@ MeshLib::Mesh3D<Real> *LoopQuadProcessing(MeshLib::Mesh3D<Real> *input_mesh, con
     if (merged_mesh->get_num_of_faces() <= min_face_num)
     {
         delete merged_mesh;
-        return 0;
+        return nullptr;
     }
     else
         return merged_mesh;

@@ -11,7 +11,7 @@ template <typename Real>
 MeshLib::Mesh3D<Real> *Tri2QuadMerger<Real>::create_merged_mesh()
 {
     if (!m_pmesh)
-        return 0;
+        return nullptr;
     MeshLib::Mesh3D<Real> *m_merged_mesh = new MeshLib::Mesh3D<Real>;
 
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_vertices(); i++)
@@ -23,7 +23,7 @@ MeshLib::Mesh3D<Real> *Tri2QuadMerger<Real>::create_merged_mesh()
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); i++)
     {
         auto edge = m_pmesh->get_edge(i);
-        if (edge->tag == false || edge->id > edge->pair->id || edge->face == 0 || edge->pair->face == 0 || edge->face->tag == false || edge->pair->face->tag == false)
+        if (edge->tag == false || edge->id > edge->pair->id || edge->face == nullptr || edge->pair->face == nullptr || edge->face->tag == false || edge->pair->face->tag == false)
             continue;
 
         auto v0 = edge->next->vert;
@@ -32,10 +32,11 @@ MeshLib::Mesh3D<Real> *Tri2QuadMerger<Real>::create_merged_mesh()
         auto v3 = edge->vert;
 
         std::vector<MeshLib::HE_vert<Real> *> vertex_list;
-        vertex_list.push_back(m_merged_mesh->get_vertex(v0->id));
-        vertex_list.push_back(m_merged_mesh->get_vertex(v1->id));
-        vertex_list.push_back(m_merged_mesh->get_vertex(v2->id));
-        vertex_list.push_back(m_merged_mesh->get_vertex(v3->id));
+        vertex_list.reserve(4);
+        vertex_list.emplace_back(m_merged_mesh->get_vertex(v0->id));
+        vertex_list.emplace_back(m_merged_mesh->get_vertex(v1->id));
+        vertex_list.emplace_back(m_merged_mesh->get_vertex(v2->id));
+        vertex_list.emplace_back(m_merged_mesh->get_vertex(v3->id));
         m_merged_mesh->insert_face(vertex_list);
         num_quads++;
     }
@@ -46,10 +47,11 @@ MeshLib::Mesh3D<Real> *Tri2QuadMerger<Real>::create_merged_mesh()
         if (face->tag == false)
         {
             std::vector<MeshLib::HE_vert<Real> *> vertex_list;
+            vertex_list.reserve(face->valence);
             auto he = face->edge;
             do
             {
-                vertex_list.push_back(m_merged_mesh->get_vertex(he->vert->id));
+                vertex_list.emplace_back(m_merged_mesh->get_vertex(he->vert->id));
                 he = he->next;
             } while (he != face->edge);
             m_merged_mesh->insert_face(vertex_list);
@@ -70,7 +72,7 @@ MeshLib::Mesh3D<Real> *Tri2QuadMerger<Real>::create_merged_mesh()
 template <typename Real>
 bool Tri2QuadMerger<Real>::edge_mergeable(MeshLib::HE_edge<Real> *edge, bool check_face_tag)
 {
-    if (edge->tag || edge->pair->tag || edge->face == 0 || edge->pair->face == 0 || edge->face->valence != 3 || edge->pair->face->valence != 3)
+    if (edge->tag || edge->pair->tag || edge->face == nullptr || edge->pair->face == nullptr || edge->face->valence != 3 || edge->pair->face->valence != 3)
         return false;
 
     if (check_face_tag && (edge->face->tag || edge->pair->face->tag))

@@ -24,18 +24,20 @@ bool PoissonSampling<Real>::sampling(Real radius, MeshLib::Mesh3D<Real> *input_m
     if (input_mesh == nullptr || num_samples <= 0)
         return false;
 
-    std::vector<TinyVector<Real, 3>> mesh_vertices(input_mesh->get_num_of_vertices());
-    for (ptrdiff_t i = 0; i < input_mesh->get_num_of_vertices(); i++)
+    const auto vertex_count = input_mesh->get_num_of_vertices();
+    const auto face_count = input_mesh->get_num_of_faces();
+    std::vector<TinyVector<Real, 3>> mesh_vertices(vertex_count);
+    for (ptrdiff_t i = 0; i < vertex_count; ++i)
     {
         mesh_vertices[i] = input_mesh->get_vertex(i)->pos;
     }
     std::vector<ptrdiff_t> mesh_facets;
     if (input_mesh->is_tri())
-        mesh_facets.reserve(input_mesh->get_num_of_faces() * 3);
+        mesh_facets.reserve(face_count * 3);
     else
-        mesh_facets.reserve(input_mesh->get_num_of_faces() * 6);
+        mesh_facets.reserve(face_count * 6);
 
-    for (ptrdiff_t i = 0; i < input_mesh->get_num_of_faces(); i++)
+    for (ptrdiff_t i = 0; i < face_count; ++i)
     {
         auto face = input_mesh->get_face(i);
         auto edge = face->edge;
@@ -70,7 +72,7 @@ bool PoissonSampling<Real>::sampling(Real radius, MeshLib::Mesh3D<Real> *input_m
         }
         else
         {
-            for (ptrdiff_t j = 0; j < face->valence - 2; j++)
+            for (ptrdiff_t j = 0; j < face->valence - 2; ++j)
             {
                 mesh_facets.emplace_back(face->edge->pair->vert->id);
                 mesh_facets.emplace_back(edge->vert->id);
@@ -94,7 +96,7 @@ bool PoissonSampling<Real>::sampling(Real radius, const std::vector<TinyVector<R
     Real surface_area = create_raw_samples(raw_sample_ratio * num_samples, vertices, triangles, raw_samples, tri_normal);
 
     if (radius <= 0)
-        radius = std::sqrt(surface_area / num_samples) * (Real)0.75;
+        radius = std::sqrt(surface_area / num_samples) * static_cast<Real>(0.75);
 
     poisson_disk_from_samples(radius, tri_normal, raw_samples, samples, sample_located_face_ids, sample_bary_coords);
 
@@ -119,8 +121,8 @@ Real PoissonSampling<Real>::approximate_geodesic_distance(const TinyVector<Real,
 {
     auto v = p2 - p1;
     auto l = v.Normalize();
-    auto c1 = std::min((Real)1, std::max(-(Real)1, n1.Dot(v)));
-    auto c2 = std::min((Real)1, std::max(-(Real)1, n2.Dot(v)));
+    auto c1 = std::min(static_cast<Real>(1), std::max(static_cast<Real>(-1), n1.Dot(v)));
+    auto c2 = std::min(static_cast<Real>(1), std::max(static_cast<Real>(-1), n2.Dot(v)));
     auto result = l * l;
     if (std::fabs(c1 - c2) > 1e-6)
         result *= (std::asin(c1) - std::asin(c2)) / (c1 - c2);
@@ -142,16 +144,16 @@ Real PoissonSampling<Real>::create_raw_samples(int num_samples,
     {
         area_of_triangle(vertices[triangles[i]], vertices[triangles[i + 1]], vertices[triangles[i + 2]],
                          tri_area[i / 3], tri_normal[i / 3]);
-        area_sum_to_index[max_area_sum] = i / 3;
+        area_sum_to_index.emplace(max_area_sum, i / 3);
         max_area_sum += tri_area[i / 3];
     }
 
     samples.resize(num_samples);
-    for (int i = 0; i < num_samples; i++)
+    for (int i = 0; i < num_samples; ++i)
     {
         auto r = random_value(max_area_sum);
         auto it = area_sum_to_index.upper_bound(r);
-        it--;
+        --it;
         auto tri_index = it->second;
         auto tri = tri_index * 3;
         const auto &v0 = vertices[triangles[tri]];
@@ -194,7 +196,7 @@ void PoissonSampling<Real>::poisson_disk_from_samples(const Real radius,
 
     Real radius_square = radius * radius;
     TinyVector<Real, 3> grid_size = boxsize / radius;
-    int grid_size_int[3] = {(int)std::ceil(grid_size[0]), (int)std::ceil(grid_size[1]), (int)std::ceil(grid_size[2])};
+    int grid_size_int[3] = {static_cast<int>(std::ceil(grid_size[0])), static_cast<int>(std::ceil(grid_size[1])), static_cast<int>(std::ceil(grid_size[2]))};
     grid_size_int[0] = std::max(1, grid_size_int[0]);
     grid_size_int[1] = std::max(1, grid_size_int[1]);
     grid_size_int[2] = std::max(1, grid_size_int[2]);
@@ -206,9 +208,9 @@ void PoissonSampling<Real>::poisson_disk_from_samples(const Real radius,
     for (auto &sample : raw_samples)
     {
         auto rp = sample.pos - min_bound;
-        auto ix = (int)std::floor(rp[0] / grid_size[0]);
-        auto iy = (int)std::floor(rp[1] / grid_size[1]);
-        auto iz = (int)std::floor(rp[2] / grid_size[2]);
+        auto ix = static_cast<int>(std::floor(rp[0] / grid_size[0]));
+        auto iy = static_cast<int>(std::floor(rp[1] / grid_size[1]));
+        auto iz = static_cast<int>(std::floor(rp[2] / grid_size[2]));
         sample.cell_id = ix + grid_size_int[0] * (iy + grid_size_int[1] * iz);
     }
 
@@ -216,10 +218,11 @@ void PoissonSampling<Real>::poisson_disk_from_samples(const Real radius,
               { return a.cell_id < b.cell_id; });
 
     std::unordered_map<ptrdiff_t, hash_data<Real>> cells;
+    cells.reserve(raw_samples.size());
 
     ptrdiff_t last_id = -1;
     typename std::unordered_map<ptrdiff_t, hash_data<Real>>::iterator last_id_it;
-    for (size_t i = 0; i < raw_samples.size(); i++)
+    for (size_t i = 0; i < raw_samples.size(); ++i)
     {
         const auto &sample = raw_samples[i];
         if (sample.cell_id == last_id)
@@ -231,12 +234,13 @@ void PoissonSampling<Real>::poisson_disk_from_samples(const Real radius,
         data.first_sample_idx = i;
         data.sample_cnt = 1;
 
-        auto result = cells.insert(std::make_pair(sample.cell_id, data));
+        auto result = cells.emplace(sample.cell_id, data);
         last_id = sample.cell_id;
         last_id_it = result.first;
     }
 
     std::vector<ptrdiff_t> neighbor_cell_offsets;
+    neighbor_cell_offsets.reserve(27);
     for (int x = -1; x <= 1; ++x)
     {
         for (int y = -1; y <= 1; ++y)
@@ -252,11 +256,8 @@ void PoissonSampling<Real>::poisson_disk_from_samples(const Real radius,
     int max_trials = 5;
     for (int trial = 0; trial < max_trials; ++trial)
     {
-        for (auto &it : cells)
+        for (auto &[cell_id, data] : cells)
         {
-            ptrdiff_t cell_id = it.first;
-            hash_data<Real> &data = it.second;
-
             ptrdiff_t next_sample_idx = data.first_sample_idx + trial;
             if (trial >= data.sample_cnt)
                 continue;
@@ -267,14 +268,13 @@ void PoissonSampling<Real>::poisson_disk_from_samples(const Real radius,
             for (ptrdiff_t neighbor_offset : neighbor_cell_offsets)
             {
                 ptrdiff_t neighbor_cell_id = cell_id + neighbor_offset;
-                const auto &neighbor_it = cells.find(neighbor_cell_id);
+                const auto neighbor_it = cells.find(neighbor_cell_id);
                 if (neighbor_it == cells.end())
                     continue;
 
                 const hash_data<Real> &neighbor_data = neighbor_it->second;
                 for (const auto &sample : neighbor_data.poisson_samples)
                 {
-                    Real distance = approximate_geodesic_distance(sample.pos, candidate.pos, tri_normal[sample.tri_id], tri_normal[candidate.tri_id]);
                     if ((sample.pos - candidate.pos).SquaredLength() < radius_square)
                     {
                         conflict = true;
@@ -292,9 +292,15 @@ void PoissonSampling<Real>::poisson_disk_from_samples(const Real radius,
             data.poisson_samples.emplace_back(candidate);
         }
     }
-    samples.resize(0), sample_located_face_ids.resize(0);
+    samples.clear();
+    sample_located_face_ids.clear();
+    samples.reserve(raw_samples.size());
+    sample_located_face_ids.reserve(raw_samples.size());
     if (sample_bary_coords)
-        sample_bary_coords->resize(0);
+    {
+        sample_bary_coords->clear();
+        sample_bary_coords->reserve(raw_samples.size());
+    }
     for (const auto &it : cells)
     {
         for (const auto &sample : it.second.poisson_samples)
@@ -310,7 +316,7 @@ void PoissonSampling<Real>::poisson_disk_from_samples(const Real radius,
 template <typename Real>
 Real PoissonSampling<Real>::quad_util_compute_angle(const Real dot_product_value)
 {
-    return std::acos(std::min((Real)1, std::max(-(Real)1, dot_product_value))) * 180 / (Real)M_PI;
+    return std::acos(std::min(static_cast<Real>(1), std::max(static_cast<Real>(-1), dot_product_value))) * 180 / static_cast<Real>(M_PI);
 }
 
 template <typename Real>

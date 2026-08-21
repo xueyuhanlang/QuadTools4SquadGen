@@ -25,14 +25,14 @@ PatchSample<Real>::PatchSample(MeshLib::Mesh3D<Real> *input_quad_mesh,
                                bool debug)
     : quad_mesh(input_quad_mesh), debug_mode(debug)
 {
-    if (input_quad_mesh == 0 || input_quad_mesh->is_quad() == false)
+    if (input_quad_mesh == nullptr || input_quad_mesh->is_quad() == false)
     {
-        std::cout << "Error: the input is not valid!" << std::endl;
+        std::cout << "Error: the input is not valid!" << '\n';
         valid = false;
         return;
     }
 
-    valid = !has_zero_length_edge(input_quad_mesh, (Real)1.0e-12);
+    valid = !has_zero_length_edge(input_quad_mesh, static_cast<Real>(1.0e-12));
     if (!valid)
     {
         return;
@@ -82,7 +82,7 @@ PatchSample<Real>::PatchSample(MeshLib::Mesh3D<Real> *input_quad_mesh,
     }
 
     auto size = std::max(quad_mesh->zmax - quad_mesh->zmin, std::max(quad_mesh->ymax - quad_mesh->ymin, quad_mesh->xmax - quad_mesh->xmin));
-    auto radius = resolution > 0 ? (Real)size / (2 * resolution) : (Real)-1;
+    auto radius = resolution > 0 ? static_cast<Real>(size) / (2 * resolution) : static_cast<Real>(-1);
 
     PoissonSampling<Real> poisson_sampling(random_seed);
 
@@ -119,7 +119,7 @@ PatchSample<Real>::PatchSample(MeshLib::Mesh3D<Real> *input_quad_mesh,
             {
                 suc = false;
                 PoissonSampling<Real> poisson_sampling(rand());
-                poisson_sampling.sampling((Real)-1, vertices, triangles,
+                poisson_sampling.sampling(static_cast<Real>(-1), vertices, triangles,
                                           fps_points[i], fps_point_face_ids[i], &fps_bary_coords[i], num_fps_points + buffer_size);
                 if (fps_points[i].size() >= num_fps_points)
                 {
@@ -140,7 +140,7 @@ PatchSample<Real>::PatchSample(MeshLib::Mesh3D<Real> *input_quad_mesh,
                 else
                 {
                     // unlikely to happen
-                    // std::cout << "FPS sampling failed, retrying..." << std::endl;
+                    // std::cout << "FPS sampling failed, retrying..." << '\n';
                     buffer_size *= 2;
                 }
             } while (!suc);
@@ -156,11 +156,11 @@ PatchSample<Real>::PatchSample(MeshLib::Mesh3D<Real> *input_quad_mesh,
         std::vector<Real> sample_point_colors_0(sample_points.size()), sample_point_colors_1(sample_points.size()), triangles_colors_0(triangles.size() / 3), triangles_colors_1(triangles.size() / 3);
         std::vector<TinyVector<Real, 3>> sample_normals(sample_points.size());
 #pragma omp parallel for
-        for (ptrdiff_t i = 0; i < (ptrdiff_t)sample_points.size(); i++)
+        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(sample_points.size()); i++)
         {
             Real c0, c1;
             TinyVector<Real, 3> g0, g1;
-            get_grading_color_all((int)sample_point_face_ids[i], sample_points[i], c0, c1, &g0, &g1);
+            get_grading_color_all(static_cast<int>(sample_point_face_ids[i]), sample_points[i], c0, c1, &g0, &g1);
             sample_point_colors_0[i] = std::min(c0, c1);
             sample_point_colors_1[i] = std::min(1 - c0, 1 - c1);
             if (c0 < c1)
@@ -178,7 +178,7 @@ PatchSample<Real>::PatchSample(MeshLib::Mesh3D<Real> *input_quad_mesh,
             sample_normals[i] = subdiv_mesh->get_face(sample_point_face_ids[i] / 2)->normal;
         }
 #pragma omp parallel for
-        for (int i = 0; i < (int)triangles.size(); i += 3)
+        for (int i = 0; i < static_cast<int>(triangles.size()); i += 3)
         {
             Real c0, c1;
             get_grading_color_all(i / 3, (vertices[triangles[i]] + vertices[triangles[i + 2]]) / 2, c0, c1);
@@ -200,7 +200,7 @@ PatchSample<Real>::PatchSample(MeshLib::Mesh3D<Real> *input_quad_mesh,
         //     for (int i = 0; i < num_fps_copies; i++)
         //     {
         //         // #pragma omp parallel for
-        //         for (ptrdiff_t j = 0; j < (ptrdiff_t)fps_points[i].size(); j++)
+        //         for (ptrdiff_t j = 0; j < static_cast<ptrdiff_t>(fps_points[i].size()); j++)
         //         {
         //             fps_points_colors[j] = get_grading_color(fps_point_face_ids[i][j], fps_points[i][j]);
         //         }
@@ -213,9 +213,9 @@ PatchSample<Real>::PatchSample(MeshLib::Mesh3D<Real> *input_quad_mesh,
 template <typename Real>
 PatchSample<Real>::~PatchSample()
 {
-    if (subdiv_mesh != 0)
+    if (subdiv_mesh != nullptr)
         delete subdiv_mesh;
-    if (dualquad_mesh)
+    if (dualquad_mesh != nullptr)
         delete dualquad_mesh;
 }
 ////////////////////////////////////////////////
@@ -224,7 +224,7 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
 {
     if (!valid)
     {
-        // std::cout << "Error: the input is not valid!" << std::endl;
+        // std::cout << "Error: the input is not valid!" << '\n';
         return;
     }
 
@@ -275,10 +275,10 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
     npy::tensor<std::uint32_t> quad_vertex_num(divshape);
     quad_vertex_num(0, 0) = static_cast<std::uint32_t>(quad_mesh->get_num_of_vertices());
 
-    std::vector<size_t> quadshape({(size_t)quad_mesh->get_num_of_faces(), 4});
+    std::vector<size_t> quadshape({static_cast<size_t>(quad_mesh->get_num_of_faces()), 4});
     npy::tensor<std::uint32_t> quad_facet(quadshape);
 #pragma omp parallel for
-    for (int i = 0; i < (int)quad_mesh->get_num_of_faces(); i++)
+    for (int i = 0; i < static_cast<int>(quad_mesh->get_num_of_faces()); i++)
     {
         auto face = quad_mesh->get_face(i);
         auto edge = face->edge;
@@ -292,19 +292,19 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
     output.write("quad_facet", quad_facet);
 
     // suddiv mesh
-    size_t subdiv_nf = (size_t)subdiv_mesh->get_num_of_faces(), subdiv_nv = (size_t)subdiv_mesh->get_num_of_vertices();
+    size_t subdiv_nf = static_cast<size_t>(subdiv_mesh->get_num_of_faces()), subdiv_nv = static_cast<size_t>(subdiv_mesh->get_num_of_vertices());
     std::vector<size_t> subdiv_vertexshape({subdiv_nv, 3}), subdiv_facetshape({subdiv_nf, 4}), quadinfoshape({subdiv_nf, 1}), quad2checkeridshape({quad2patches.size(), 1});
     npy::tensor<float> subdiv_vertex(subdiv_vertexshape);
     npy::tensor<std::uint32_t> subdiv_facet(subdiv_facetshape), face2quad(quadinfoshape), quad2patch(quad2checkeridshape);
     npy::tensor<std::int8_t> quad_split(quadinfoshape);
 #pragma omp parallel for
-    for (int i = 0; i < (int)subdiv_mesh->get_num_of_vertices(); i++)
+    for (int i = 0; i < static_cast<int>(subdiv_mesh->get_num_of_vertices()); i++)
     {
         auto vert = subdiv_mesh->get_vertex(i);
         subdiv_vertex(i, 0) = static_cast<float>(vert->pos[0]), subdiv_vertex(i, 1) = static_cast<float>(vert->pos[1]), subdiv_vertex(i, 2) = static_cast<float>(vert->pos[2]);
     }
 #pragma omp parallel for
-    for (int i = 0; i < (int)subdiv_mesh->get_num_of_faces(); i++)
+    for (int i = 0; i < static_cast<int>(subdiv_mesh->get_num_of_faces()); i++)
     {
         auto face = subdiv_mesh->get_face(i);
         auto edge = face->edge;
@@ -317,7 +317,7 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
         quad_split(i, 0) = static_cast<std::int8_t>(split_flip[i]);
     }
 #pragma omp parallel for
-    for (int i = 0; i < (int)quad2patches.size(); i++)
+    for (int i = 0; i < static_cast<int>(quad2patches.size()); i++)
     {
         quad2patch(i, 0) = static_cast<std::uint32_t>(quad2patches[i]);
     }
@@ -331,7 +331,7 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
     //////////////////////////////////
     // export quad faces
     // center/normal/colors/checker ids/offset-ids
-    size_t nf = (size_t)dualquad_mesh->get_num_of_faces();
+    size_t nf = static_cast<size_t>(dualquad_mesh->get_num_of_faces());
     std::vector<size_t> dualquadoffsetshape3({nf, 3}), dualquadoffsetshape4({nf, 4});
     npy::tensor<std::uint32_t> offset_abcd_ids(dualquadoffsetshape4), offset_123_ids(dualquadoffsetshape3);
 
@@ -345,7 +345,7 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
 
     std::vector<ptrdiff_t> dualquad_face_checker_vertex_id(dualquad_mesh->get_num_of_faces(), -1);
 #pragma omp parallel for
-    for (int i = 0; i < (int)dualquad_mesh->get_num_of_faces(); i++)
+    for (int i = 0; i < static_cast<int>(dualquad_mesh->get_num_of_faces()); i++)
     {
         auto face = dualquad_mesh->get_face(i);
         auto edge = face->edge;
@@ -362,7 +362,7 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
     }
 
 #pragma omp parallel for
-    for (int i = 0; i < (int)dualquad_mesh->get_num_of_faces(); i++)
+    for (int i = 0; i < static_cast<int>(dualquad_mesh->get_num_of_faces()); i++)
     {
         auto face = dualquad_mesh->get_face(i);
         auto edge = face->edge;
@@ -398,7 +398,7 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
 
     // export quad face center, normal, color, checker id
     // export color information
-    std::vector<size_t> colorstoresize({edge_color_store.size(), 2}), edgecolorsize({(size_t)subdiv_mesh->get_num_of_faces() * 4, 1});
+    std::vector<size_t> colorstoresize({edge_color_store.size(), 2}), edgecolorsize({static_cast<size_t>(subdiv_mesh->get_num_of_faces()) * 4, 1});
     npy::tensor<float> colorstore(colorstoresize);
     npy::tensor<std::int32_t> edge_color(edgecolorsize);
 #pragma omp parallel for
@@ -422,7 +422,7 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
     //////////////////////////////////
 
     // edge information
-    std::vector<size_t> edgeshape({(size_t)subdiv_mesh->get_num_of_edges() / 2, 2}), vertshape({(size_t)subdiv_mesh->get_num_of_edges() / 2, 4});
+    std::vector<size_t> edgeshape({static_cast<size_t>(subdiv_mesh->get_num_of_edges()) / 2, 2}), vertshape({static_cast<size_t>(subdiv_mesh->get_num_of_edges()) / 2, 4});
     npy::tensor<std::uint32_t> edge_faceids(edgeshape); // face0, face1: triface
     npy::tensor<std::int8_t> edge_info(vertshape);      // quad_face_edge_id, opp_vert_local_id, tag;  opp_vert: opposite vert at neighbor tri face, tag: 1: border, 0: non-border
 
@@ -462,7 +462,7 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
     }
 
     int edge_counter = 0;
-    for (int i = 0; i < (int)subdiv_mesh->get_num_of_edges(); i++)
+    for (int i = 0; i < static_cast<int>(subdiv_mesh->get_num_of_edges()); i++)
     {
         auto edge = subdiv_mesh->get_edge(i);
         if (edge->id > edge->pair->id || edge->face == 0)
@@ -492,7 +492,7 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
     npy::tensor<float> samplepts(sampleshape), sample_bary_coords(sampleshape);
     npy::tensor<std::uint32_t> point2triid(sample_colorshape);
 #pragma omp parallel for
-    for (int i = 0; i < (int)sample_points.size(); i++)
+    for (int i = 0; i < static_cast<int>(sample_points.size()); i++)
     {
         samplepts(i, 0) = static_cast<float>(sample_points[i][0]), samplepts(i, 1) = static_cast<float>(sample_points[i][1]), samplepts(i, 2) = static_cast<float>(sample_points[i][2]);
         sample_bary_coords(i, 0) = static_cast<float>(sample_point_bary_coords[i][0]), sample_bary_coords(i, 1) = static_cast<float>(sample_point_bary_coords[i][1]), sample_bary_coords(i, 2) = static_cast<float>(sample_point_bary_coords[i][2]);
@@ -513,9 +513,9 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
         npy::tensor<float> fps_points_tensor(fpsshape);
         npy::tensor<std::uint32_t> fps_face_ids(fps_face_ids_shape);
 #pragma omp parallel for
-        for (int i = 0; i < (int)fps_bary_coords.size(); i++)
+        for (int i = 0; i < static_cast<int>(fps_bary_coords.size()); i++)
         {
-            for (int j = 0; j < (int)fps_bary_coords[i].size(); j++)
+            for (int j = 0; j < static_cast<int>(fps_bary_coords[i].size()); j++)
             {
                 fps_points_tensor(i, j, 0) = static_cast<float>(fps_bary_coords[i][j][0]);
                 fps_points_tensor(i, j, 1) = static_cast<float>(fps_bary_coords[i][j][1]);
@@ -569,13 +569,13 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
             delete tmp_mesh;
         }
 
-        int div = (int)pow(4, num_subdiv);
+        int div = static_cast<int>(pow(4, num_subdiv));
         size_t nf = trimesh->get_num_of_faces();
         std::vector<size_t> facecolorshape({nf, 1}), offsetshape({nf, 3});
         npy::tensor<float> cdf_color(facecolorshape), dcdf_color(facecolorshape), offset(offsetshape), offsetc(offsetshape), offsetb(offsetshape), offsetd(offsetshape);
         std::vector<TinyVector<Real, 3>> cdf_gradients(nf), dcdf_gradients(nf);
 #pragma omp parallel for
-        for (int i = 0; i < (int)trimesh->get_num_of_faces(); i++)
+        for (int i = 0; i < static_cast<int>(trimesh->get_num_of_faces()); i++)
         {
             auto face = trimesh->get_face(i);
             auto edge = face->edge;
@@ -589,10 +589,10 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
             dcdf_gradients[i].Normalize();
             cdf_gradients[i] = (c0 < c1) ? -grad1 : -grad0;
             cdf_gradients[i].Normalize();
-            const auto &center = subdiv_mesh->get_vertex(offset_abcd_ids((int)face2quad(i / (2 * div), 0), 0))->pos;
-            const auto &ccenter = subdiv_mesh->get_vertex(offset_abcd_ids((int)face2quad(i / (2 * div), 0), 2))->pos;
-            const auto &bcenter = subdiv_mesh->get_vertex(offset_abcd_ids((int)face2quad(i / (2 * div), 0), 1))->pos;
-            const auto &dcenter = subdiv_mesh->get_vertex(offset_abcd_ids((int)face2quad(i / (2 * div), 0), 3))->pos;
+            const auto &center = subdiv_mesh->get_vertex(offset_abcd_ids(static_cast<int>(face2quad(i / (2 * div), 0)), 0))->pos;
+            const auto &ccenter = subdiv_mesh->get_vertex(offset_abcd_ids(static_cast<int>(face2quad(i / (2 * div), 0)), 2))->pos;
+            const auto &bcenter = subdiv_mesh->get_vertex(offset_abcd_ids(static_cast<int>(face2quad(i / (2 * div), 0)), 1))->pos;
+            const auto &dcenter = subdiv_mesh->get_vertex(offset_abcd_ids(static_cast<int>(face2quad(i / (2 * div), 0)), 3))->pos;
             auto doffset = center - pos;
             auto coffest = ccenter - pos;
             auto boffset = bcenter - pos;
@@ -628,7 +628,7 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
         // std::filesystem::path rosy_filename = npzpath.parent_path() / "subdiv.rosy";
         // std::ofstream output_rosy(rosy_filename.string());
         // output_rosy << cdf_gradients.size() << "\n4\n";
-        // for (int i = 0; i < (int)cdf_gradients.size(); i++)
+        // for (int i = 0; i < static_cast<int>(cdf_gradients.size()); i++)
         // {
         //     output_rosy << cdf_gradients[i] << "\n";
         // }
@@ -636,7 +636,7 @@ void PatchSample<Real>::save_samples_to_npz(const std::string &npzfilename, bool
         // std::filesystem::path frame_filename = npzpath.parent_path() / "subdiv.frame";
         // std::ofstream output_frame(frame_filename.string());
         // output_frame << "4 " << cdf_gradients.size() << "\n";
-        // for (int i = 0; i < (int)cdf_gradients.size(); i++)
+        // for (int i = 0; i < static_cast<int>(cdf_gradients.size()); i++)
         // {
         //     output_frame << i << ' ' << cdf_gradients[i] << ' ' << dcdf_gradients[i] << "\n";
         // }
@@ -713,8 +713,8 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
         set_mesh_as_complex(quad_mesh, complex_edge_tag, corner_tag, complex_edge_loops,
                             complex_edge_loops_corner_starting_edges, complex_edge_loops_neighbor_cluster_ids, complex_edge_loops_cluster_ids,
                             complex_arcs, arc_group_num);
-        num_complex = (int)quad_mesh->get_num_of_faces();
-        num_singularity = (int)quad_mesh->get_num_of_vertices();
+        num_complex = static_cast<int>(quad_mesh->get_num_of_faces());
+        num_singularity = static_cast<int>(quad_mesh->get_num_of_vertices());
     }
     num_boundary = quad_mesh->get_num_of_boundaries();
 
@@ -764,7 +764,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
             auto gid = iter->second.group_id;
             bool order = iter->first.end_vertices[0] == start_vert->id ? iter->second.orientation : !iter->second.orientation;
 
-            arc_edge_length.resize(0);
+            arc_edge_length.clear();
             Real accum_len = 0;
             for (size_t k = 0; k < boundary_edge_loop.size(); k++)
             {
@@ -776,7 +776,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
                         arc_lengths[gid].assign(arc_edge_length.size(), 0);
                     }
                     Real accum = 0;
-                    Real sum_len = std::accumulate(arc_edge_length.begin(), arc_edge_length.end(), (Real)0);
+                    Real sum_len = std::accumulate(arc_edge_length.begin(), arc_edge_length.end(), static_cast<Real>(0));
                     if (order)
                     {
                         for (size_t l = 0; l < arc_edge_length.size(); l++)
@@ -787,13 +787,13 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
                     }
                     else
                     {
-                        for (int l = (int)arc_edge_length.size() - 1; l >= 0; l--)
+                        for (int l = static_cast<int>(arc_edge_length.size()) - 1; l >= 0; l--)
                         {
                             accum += arc_edge_length[l];
                             arc_lengths[gid][arc_edge_length.size() - l - 1] += accum / sum_len;
                         }
                     }
-                    arc_edge_length.resize(0);
+                    arc_edge_length.clear();
                     break;
                 }
                 arc_edge_length.emplace_back(edge->GetLength());
@@ -805,15 +805,15 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
     std::vector<Real> interpolation_weights(arc_group_num, 0);
     for (size_t i = 0; i < arc_group_num; i++)
     {
-        for (int j = 0; j < (int)arc_lengths[i].size(); j++)
+        for (int j = 0; j < static_cast<int>(arc_lengths[i].size()); j++)
         {
             auto t = arc_lengths[i][j] / arc_lengths[i].back();
-            if (t >= (Real)0.5)
+            if (t >= static_cast<Real>(0.5))
             {
                 split_positions[i] = j;
                 auto denom = (j > 0 ? (arc_lengths[i][j] - arc_lengths[i][j - 1]) : arc_lengths[i][j]);
-                interpolation_weights[i] = (arc_lengths[i][j] - arc_lengths[i].back() * (Real)0.5) / denom;
-                interpolation_weights[i] = std::max((Real)0.01, std::min((Real)0.99, interpolation_weights[i])); // avoid being too close to 0 or 1
+                interpolation_weights[i] = (arc_lengths[i][j] - arc_lengths[i].back() * static_cast<Real>(0.5)) / denom;
+                interpolation_weights[i] = std::max(static_cast<Real>(0.01), std::min(static_cast<Real>(0.99), interpolation_weights[i])); // avoid being too close to 0 or 1
                 break;
             }
         }
@@ -827,7 +827,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
         subdiv_mesh->insert_vertex(vert->pos);
     }
     std::queue<std::pair<MeshLib::HE_edge<Real> *, Real>> edge_queue;
-    std::vector<MeshLib::HE_vert<Real> *> edge_to_vertex_map(quad_mesh->get_num_of_edges(), 0);
+    std::vector<MeshLib::HE_vert<Real> *> edge_to_vertex_map(quad_mesh->get_num_of_edges(), nullptr);
     std::vector<Real> edge_interpolation_weight(quad_mesh->get_num_of_edges(), 0);
 
     for (size_t i = 0; i < complex_edge_loops.size(); i++)
@@ -852,7 +852,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
             bool order = iter->first.end_vertices[0] == start_vert->id ? iter->second.orientation : !iter->second.orientation;
             auto gid = iter->second.group_id;
 
-            arc_edge_length.resize(0);
+            arc_edge_length.clear();
             Real accum_len = 0;
             int count = 0;
             for (size_t k = 0; k < boundary_edge_loop.size(); k++)
@@ -914,7 +914,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
         if (edge->face == 0)
             continue;
         auto opposite_edge = edge->next->next;
-        if (edge_to_vertex_map[opposite_edge->id] != 0)
+        if (edge_to_vertex_map[opposite_edge->id] != nullptr)
             continue;
 
         auto p = (1 - t) * opposite_edge->vert->pos + t * opposite_edge->pair->vert->pos;
@@ -956,7 +956,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
             edge = edge->next;
         }
 
-        if (edge_vertices[0] != 0 && edge_vertices[1] != 0)
+        if (edge_vertices[0] != nullptr && edge_vertices[1] != nullptr)
         {
             auto p0 = edge_weights[0] * edge_vertices[3]->pos + (1 - edge_weights[0]) * edge_vertices[1]->pos;
             auto p1 = edge_weights[1] * edge_vertices[0]->pos + (1 - edge_weights[1]) * edge_vertices[2]->pos;
@@ -970,14 +970,14 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
             vertex_list = {center_v, edge_vertices[2], original_vertices[3], edge_vertices[3]};
             subdiv_mesh->insert_face(vertex_list);
         }
-        else if (edge_vertices[0] != 0)
+        else if (edge_vertices[0] != nullptr)
         {
             vertex_list = {original_vertices[0], edge_vertices[0], edge_vertices[2], original_vertices[3]};
             subdiv_mesh->insert_face(vertex_list);
             vertex_list = {edge_vertices[0], original_vertices[1], original_vertices[2], edge_vertices[2]};
             subdiv_mesh->insert_face(vertex_list);
         }
-        else if (edge_vertices[1] != 0)
+        else if (edge_vertices[1] != nullptr)
         {
             vertex_list = {original_vertices[0], original_vertices[1], edge_vertices[1], edge_vertices[3]};
             subdiv_mesh->insert_face(vertex_list);
@@ -1086,8 +1086,8 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
         do
         {
 
-            path_vertices.resize(0);
-            path_edge_length.resize(0);
+            path_vertices.clear();
+            path_edge_length.clear();
             auto next_edge = edge;
             do
             {
@@ -1119,7 +1119,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
 
             if (path_edge_length.size() > 1)
             {
-                Real sum_len = std::accumulate(path_edge_length.begin(), path_edge_length.end(), (Real)0);
+                Real sum_len = std::accumulate(path_edge_length.begin(), path_edge_length.end(), static_cast<Real>(0));
                 Real accum_len = 0;
                 for (size_t j = path_edge_length.size() - 1; j >= 1; j--)
                 {
@@ -1141,7 +1141,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
     edge_vertex_color.assign(subdiv_mesh->get_num_of_edges(), 0);
     tag_wall_edges.assign(subdiv_mesh->get_num_of_edges(), false);
     edge_color_store.clear();
-    edge_color_store.push_back(std::make_pair((Real)0, (Real)0));
+    edge_color_store.emplace_back(static_cast<Real>(0), static_cast<Real>(0));
     for (ptrdiff_t i = 0; i < subdiv_mesh->get_num_of_edges(); i++)
     {
         auto edge = subdiv_mesh->get_edge(i);
@@ -1157,8 +1157,8 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
             if (edge->tag)
             {
                 edge_vertex_color[edge->id] = edge_color_store.size();
-                edge_vertex_color[edge->pair->id] = -(ptrdiff_t)edge_color_store.size();
-                edge_color_store.push_back(std::make_pair(subdiv_mesh_vertex_color[edge->pair->vert->id], subdiv_mesh_vertex_color[edge->vert->id]));
+                edge_vertex_color[edge->pair->id] = -static_cast<ptrdiff_t>(edge_color_store.size());
+                edge_color_store.emplace_back(subdiv_mesh_vertex_color[edge->pair->vert->id], subdiv_mesh_vertex_color[edge->vert->id]);
                 edge_color_queue.push(edge);
                 edge_color_queue.push(edge->pair);
             }
@@ -1211,7 +1211,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
     // use wall edges to find clusters
     int quad_id = 0;
     quad_id_map.assign(subdiv_mesh->get_num_of_faces(), -1);
-    quad2patches.resize(0);
+    quad2patches.clear();
     int num_corners = 0;
     for (size_t i = 0; i < corner_tag.size(); i++)
     {
@@ -1252,7 +1252,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
         num_corners++;
     }
 
-    if (dualquad_mesh)
+    if (dualquad_mesh != nullptr)
         delete dualquad_mesh;
     dualquad_mesh = new MeshLib::Mesh3D<Real>;
     dualquad_vertex_id_map.clear();
@@ -1270,14 +1270,14 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
     std::vector<bool> vert_tag;
     for (ptrdiff_t i = 0; i < subdiv_mesh->get_num_of_vertices(); i++)
     {
-        if ((i < (ptrdiff_t)corner_tag.size() && corner_tag[i]) || wall_vertex_degree[i] > 2)
+        if ((i < static_cast<ptrdiff_t>(corner_tag.size()) && corner_tag[i]) || wall_vertex_degree[i] > 2)
         {
             auto vert = dualquad_mesh->insert_vertex(subdiv_mesh->get_vertex(i)->pos);
             dualquad_vertex_id_map.push_back(i);
             inverse_vertex_id_map[i] = vert->id;
             dual_quad_vertex_tag[i] = true;
 
-            if (i < (ptrdiff_t)corner_tag.size() && corner_tag[i])
+            if (i < static_cast<ptrdiff_t>(corner_tag.size()) && corner_tag[i])
             {
                 vert_tag.push_back(true);
             }
@@ -1302,7 +1302,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
         {
             if (he->tag == false && he->face)
             {
-                facelist.resize(0);
+                facelist.clear();
                 facelist.push_back(dualquad_mesh->get_vertex(inverse_vertex_id_map[i]));
                 auto cur_edge = he;
                 while (facelist.size() < 4)
@@ -1392,7 +1392,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
 //         auto vert = mesh->get_vertex(i);
 //         if (vertex_tag[vert->id] == false)
 //             continue;
-//         mout << "v " << vert->pos[0] << " " << vert->pos[1] << " " << vert->pos[2] << std::endl;
+//         mout << "v " << vert->pos[0] << " " << vert->pos[1] << " " << vert->pos[2] << '\n';
 //         vertex_id_map[vert->id] = vcount++;
 //     }
 
@@ -1402,7 +1402,7 @@ void PatchSample<Real>::compute_patch_distance(bool use_mesh_as_complex, Real sh
 //         if (edge > edge->pair || complex_edge_tag[edge->id] == false)
 //             continue;
 //         auto v0 = edge->vert, v1 = edge->pair->vert;
-//         mout << "l " << vertex_id_map[edge->vert->id] << " " << vertex_id_map[edge->pair->vert->id] << std::endl;
+//         mout << "l " << vertex_id_map[edge->vert->id] << " " << vertex_id_map[edge->pair->vert->id] << '\n';
 //     }
 //     mout.close();
 // }
@@ -1443,7 +1443,7 @@ void PatchSample<Real>::decompose_subdiv_mesh()
     //     for (ptrdiff_t i = 0; i < subdiv_mesh->get_num_of_vertices(); i++)
     //     {
     //         auto hv = subdiv_mesh->get_vertex(i);
-    //         mout << "v " << hv->pos << std::endl;
+    //         mout << "v " << hv->pos << '\n';
     //     }
     //     Real vcolor_start[4], vcolor_end[4];
     //     ptrdiff_t vid[4];
@@ -1615,13 +1615,13 @@ void PatchSample<Real>::get_grading_color_all(const int findex, const TinyVector
         }
         if (i == 0)
         {
-            color0 = std::max((Real)0, std::min((Real)1, color[0]));
+            color0 = std::max(static_cast<Real>(0), std::min(static_cast<Real>(1), color[0]));
             if (color_gradient0)
                 *color_gradient0 = grad[0];
         }
         else
         {
-            color1 = std::max((Real)0, std::min((Real)1, color[1]));
+            color1 = std::max(static_cast<Real>(0), std::min(static_cast<Real>(1), color[1]));
             if (color_gradient1)
                 *color_gradient1 = grad[1];
         }
@@ -1719,12 +1719,12 @@ Real PatchSample<Real>::get_grading_color(const int findex, const TinyVector<Rea
             // auto numerator2d = sample_point_2d.Cross(next_edge_dir2d)[0];
             // if (fabs(t[i] - numerator2d / denom2d) > 1.0e-6)
             // {
-            //     std::cout << t[i] << " " << numerator2d / denom2d << std::endl;
+            //     std::cout << t[i] << " " << numerator2d / denom2d << '\n';
             // }
             // auto new_grad = (dc / denom2d) * (next_edge_dir2d[1] * U - next_edge_dir2d[0] * V);
             // if ((new_grad - grad[i]).Length() > 1.0e-6)
             // {
-            //     std::cout << "grad error: " << new_grad << ' ' << grad[i] << std::endl;
+            //     std::cout << "grad error: " << new_grad << ' ' << grad[i] << '\n';
             // }
         }
         if (i == 1 && color[1] < color[0])
@@ -1733,7 +1733,7 @@ Real PatchSample<Real>::get_grading_color(const int findex, const TinyVector<Rea
     if (color_gradient)
         *color_gradient = grad[min_color_index];
 
-    return std::max((Real)0, std::min((Real)1, color[min_color_index]));
+    return std::max(static_cast<Real>(0), std::min(static_cast<Real>(1), color[min_color_index]));
 }
 
 ////////////////////////////////////////////////
@@ -1751,10 +1751,10 @@ void PatchSample<Real>::set_mesh_as_complex(MeshLib::Mesh3D<Real> *mesh,
     mesh->reset_edges_tag(false);
     complex_edge_tag.assign(mesh->get_num_of_edges(), true);
     corner_tag.assign(mesh->get_num_of_vertices(), true);
-    complex_edge_loops.resize(0);
-    complex_edge_loops_corner_starting_edges.resize(0);
-    complex_edge_loops_neighbor_cluster_ids.resize(0);
-    complex_edge_loops_cluster_ids.resize(0);
+    complex_edge_loops.clear();
+    complex_edge_loops_corner_starting_edges.clear();
+    complex_edge_loops_neighbor_cluster_ids.clear();
+    complex_edge_loops_cluster_ids.clear();
     for (size_t i = 0; i < complex_edge_tag.size(); i++)
     {
         auto edge = mesh->get_edge(i);
@@ -1777,7 +1777,7 @@ void PatchSample<Real>::set_mesh_as_complex(MeshLib::Mesh3D<Real> *mesh,
                 {
                     if (corner_count >= 4)
                     {
-                        std::cout << "error (corner_count " << corner_count << " >= 4)" << std::endl;
+                        std::cout << "error (corner_count " << corner_count << " >= 4)" << '\n';
                         throw std::runtime_error("Error: more than four corners on one complex edge loop! <PatchSample.cpp:set_mesh_as_complex>");
                     }
                     else
@@ -1865,7 +1865,7 @@ void PatchSample<Real>::set_mesh_as_complex(MeshLib::Mesh3D<Real> *mesh,
 
             bool orientation = iter->second.orientation;
             iter->second.visited = true;
-            iter->second.group_id = (int)arc_group_num;
+            iter->second.group_id = static_cast<int>(arc_group_num);
 
             if (iter->second.ring_neighbor_arc_1[0] != -1 && iter->second.ring_neighbor_arc_1[1] != -1)
             {

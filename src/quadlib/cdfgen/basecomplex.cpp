@@ -109,7 +109,7 @@ bool complex_arc_info::add_ring_neighbor(const ptrdiff_t v1, const ptrdiff_t v2,
     {
         return false;
     }
-    std::cout << "more than two ring neighbors for one arc!" << std::endl;
+    std::cout << "more than two ring neighbors for one arc!" << '\n';
     throw std::runtime_error("Error: more than two ring neighbors for one arc! <basecomplex.cpp:add_ring_neighbor>");
     return false;
 }
@@ -120,12 +120,12 @@ BaseComplex<Real>::BaseComplex(MeshLib::Mesh3D<Real> *input_mesh, Real sharp_ang
 {
     if (!quad_mesh)
     {
-        std::cout << "Error: Empty input!" << std::endl;
+        std::cout << "Error: Empty input!" << '\n';
         return;
     }
     else if (!quad_mesh->is_quad())
     {
-        std::cout << "Error: The input mesh is not a quad mesh!" << std::endl;
+        std::cout << "Error: The input mesh is not a quad mesh!" << '\n';
         return;
     }
 
@@ -213,9 +213,9 @@ void BaseComplex<Real>::export_complex_as_ply(const char filename[], bool save_c
             if (corner_tag[i])
             {
                 auto vert = quad_mesh->get_vertex(i);
-                vertexX.emplace_back((float)vert->pos[0]);
-                vertexY.emplace_back((float)vert->pos[1]);
-                vertexZ.emplace_back((float)vert->pos[2]);
+                vertexX.emplace_back(static_cast<float>(vert->pos[0]));
+                vertexY.emplace_back(static_cast<float>(vert->pos[1]));
+                vertexZ.emplace_back(static_cast<float>(vert->pos[2]));
                 vertex_id_map[i] = vertex_count++;
             }
         }
@@ -244,9 +244,9 @@ void BaseComplex<Real>::export_complex_as_ply(const char filename[], bool save_c
                 auto iter = vertex_id_map.find(vert->id);
                 if (iter == vertex_id_map.end())
                 {
-                    vertexX.emplace_back((float)vert->pos[0]);
-                    vertexY.emplace_back((float)vert->pos[1]);
-                    vertexZ.emplace_back((float)vert->pos[2]);
+                    vertexX.emplace_back(static_cast<float>(vert->pos[0]));
+                    vertexY.emplace_back(static_cast<float>(vert->pos[1]));
+                    vertexZ.emplace_back(static_cast<float>(vert->pos[2]));
                     vertex_id_map[vert->id] = vertex_count++;
                     face.emplace_back(vertex_count - 1);
                 }
@@ -285,7 +285,7 @@ template <typename Real>
 const int BaseComplex<Real>::get_num_complex() const
 {
     // note: the complex is the splitted version
-    return (int)complex_edge_loops.size();
+    return static_cast<int>(complex_edge_loops.size());
 }
 /////////////////////////////////////////////////
 template <typename Real>
@@ -349,13 +349,13 @@ void BaseComplex<Real>::extract_base_complex()
         }
         else
         {
-            std::cout << "should not happen: boundary edge loop is not closed!" << std::endl;
+            std::cout << "should not happen: boundary edge loop is not closed!" << '\n';
             throw std::runtime_error("Error: boundary edge loop is not closed! <basecomplex.cpp:extract_base_complex>");
         }
     }
 
     // process sharp edge loops
-    Real edge_length_ratio_threshold = (Real)0.5;
+    Real edge_length_ratio_threshold = static_cast<Real>(0.5);
     for (ptrdiff_t i = 0; i < quad_mesh->get_num_of_edges(); i++)
     {
         auto edge = quad_mesh->get_edge(i);
@@ -404,7 +404,7 @@ void BaseComplex<Real>::extract_base_complex()
     split_edge_loop(all_close_loops_with_length, has_singularity);
 
     // check validity of each noncomplex closed edge loop, whether it is divided into more than 1 segment
-    all_close_loops_with_length.resize(0);
+    all_close_loops_with_length.clear();
     for (ptrdiff_t i = 0; i < quad_mesh->get_num_of_edges(); i++)
     {
         auto edge = quad_mesh->get_edge(i);
@@ -496,10 +496,10 @@ void BaseComplex<Real>::compute_base_patch()
     /// extract complex edge loops
     quad_mesh->reset_edges_tag(false);
 
-    complex_edge_loops.resize(0);
-    complex_edge_loops_corner_starting_edges.resize(0);
-    complex_edge_loops_neighbor_cluster_ids.resize(0);
-    complex_edge_loops_cluster_ids.resize(0);
+    complex_edge_loops.clear();
+    complex_edge_loops_corner_starting_edges.clear();
+    complex_edge_loops_neighbor_cluster_ids.clear();
+    complex_edge_loops_cluster_ids.clear();
 
     for (size_t i = 0; i < complex_edge_tag.size(); i++)
     {
@@ -522,7 +522,7 @@ void BaseComplex<Real>::compute_base_patch()
                 {
                     if (corner_count >= 4)
                     {
-                        std::cout << "error (corner_count " << corner_count << " >= 4)" << std::endl;
+                        std::cout << "error (corner_count " << corner_count << " >= 4)" << '\n';
                         throw std::runtime_error("Error: more than four corners on one complex edge loop! <basecomplex.cpp:extract_base_complex>");
                     }
                     else
@@ -581,14 +581,14 @@ void BaseComplex<Real>::compute_base_patch()
                     auto edge = boundary_edge_loop[(k + corner_indices_on_loop[j]) % boundary_edge_loop.size()];
                     if (edge == end_edge)
                         break;
-                    arcinfo.arclength += (double)edge_lengths[edge->id];
+                    arcinfo.arclength += static_cast<double>(edge_lengths[edge->id]);
                 }
                 complex_arcs[arc] = arcinfo;
             }
         }
     }
 
-    group_arc_length.resize(0);
+    group_arc_length.clear();
 
     int group_count = 0;
     for (auto &c_arc : complex_arcs)
@@ -673,7 +673,7 @@ Real BaseComplex<Real>::get_edgeloop_length(const std::vector<MeshLib::HE_edge<R
 {
     Real length = 0;
 #pragma omp parallel for reduction(+ : length)
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)edge_loop.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(edge_loop.size()); i++)
     {
         length += edge_lengths[edge_loop[i]->id];
     }
@@ -683,7 +683,7 @@ Real BaseComplex<Real>::get_edgeloop_length(const std::vector<MeshLib::HE_edge<R
 template <typename Real>
 int BaseComplex<Real>::count_complex_vertices(const std::vector<MeshLib::HE_edge<Real> *> &close_edge_loop, std::vector<int> &count_corners)
 {
-    count_corners.resize(0);
+    count_corners.clear();
     int pos = 0;
     for (auto e : close_edge_loop)
     {
@@ -703,7 +703,7 @@ int BaseComplex<Real>::count_complex_vertices(const std::vector<MeshLib::HE_edge
             count_corners.emplace_back(pos);
         pos++;
     }
-    return (int)count_corners.size();
+    return static_cast<int>(count_corners.size());
 }
 //////////////////////////////////////////////
 template <typename Real>
@@ -735,9 +735,9 @@ int BaseComplex<Real>::find_mid_point(const std::vector<MeshLib::HE_edge<Real> *
 {
     Real len = 0;
     auto pos = end_pos;
-    for (int i = 0; i < (int)edge_loop.size(); i++)
+    for (int i = 0; i < static_cast<int>(edge_loop.size()); i++)
     {
-        auto p = (i + start_pos) % (int)edge_loop.size();
+        auto p = (i + start_pos) % static_cast<int>(edge_loop.size());
         len += edge_lengths[edge_loop[p]->id];
         if (len >= arclength / 2)
         {
@@ -748,7 +748,7 @@ int BaseComplex<Real>::find_mid_point(const std::vector<MeshLib::HE_edge<Real> *
             break;
     }
     if (pos == end_pos)
-        pos = (int)((end_pos - 1 + edge_loop.size()) % edge_loop.size());
+        pos = static_cast<int>((end_pos - 1 + edge_loop.size()) % edge_loop.size());
     return pos;
 }
 //////////////////////////////////////////////
@@ -757,15 +757,15 @@ int BaseComplex<Real>::find_farest_point(const std::vector<MeshLib::HE_edge<Real
 {
     Real len = 0;
     int pos = start_pos;
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)edge_loop.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(edge_loop.size()); i++)
     {
-        pos = (i + start_pos) % (int)edge_loop.size();
+        pos = (i + start_pos) % static_cast<int>(edge_loop.size());
         len += edge_lengths[edge_loop[pos]->id];
         if (len >= looplength / 2)
             break;
     }
     if (pos == start_pos)
-        pos = (int)((pos - 1 + edge_loop.size()) % edge_loop.size());
+        pos = static_cast<int>((pos - 1 + edge_loop.size()) % edge_loop.size());
     return pos;
 }
 //////////////////////////////////////////////
@@ -773,34 +773,34 @@ template <typename Real>
 void BaseComplex<Real>::find_two_farest_points(const std::vector<MeshLib::HE_edge<Real> *> &edge_loop, Real looplength, int start_pos, int &pos0, int &pos1)
 {
     Real len = 0;
-    pos0 = start_pos + 1, pos1 = (int)((start_pos - 1 + edge_loop.size()) % edge_loop.size());
+    pos0 = start_pos + 1, pos1 = static_cast<int>((start_pos - 1 + edge_loop.size()) % edge_loop.size());
     bool found_pos0 = false;
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)edge_loop.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(edge_loop.size()); i++)
     {
-        auto pos = (i + start_pos) % (int)edge_loop.size();
+        auto pos = (i + start_pos) % static_cast<int>(edge_loop.size());
         len += edge_lengths[edge_loop[pos]->id];
         if (len >= looplength / 3 && !found_pos0)
         {
-            pos0 = (int)pos;
+            pos0 = static_cast<int>(pos);
             found_pos0 = true;
         }
         if (len >= 2 * looplength / 3)
         {
-            pos1 = (int)pos;
+            pos1 = static_cast<int>(pos);
             break;
         }
     }
     if (pos0 == start_pos)
-        pos1 = (int)((start_pos - 2 + edge_loop.size()) % edge_loop.size());
+        pos1 = static_cast<int>((start_pos - 2 + edge_loop.size()) % edge_loop.size());
     if (pos1 == start_pos)
-        pos1 = (int)((start_pos - 1 + edge_loop.size()) % edge_loop.size());
+        pos1 = static_cast<int>((start_pos - 1 + edge_loop.size()) % edge_loop.size());
     if (pos0 == pos1)
     {
-        auto new_pos0 = (int)((pos0 - 1 + edge_loop.size()) % edge_loop.size());
+        auto new_pos0 = static_cast<int>((pos0 - 1 + edge_loop.size()) % edge_loop.size());
         if (new_pos0 != start_pos)
-            pos0 = (int)new_pos0;
+            pos0 = static_cast<int>(new_pos0);
         else
-            pos1 = (int)((pos1 + 1) % edge_loop.size());
+            pos1 = static_cast<int>((pos1 + 1) % edge_loop.size());
     }
 }
 //////////////////////////////////////////////
@@ -893,16 +893,16 @@ void BaseComplex<Real>::split_edge_loop(std::vector<std::pair<std::vector<MeshLi
                 // insert a new complex vertex at the middle of the longer arc between the two complex vertices
                 Real arclength01 = 0, arclength10 = 0;
                 int edgenum01 = 0, edgenum10 = 0;
-                for (ptrdiff_t i = 0; i < (ptrdiff_t)edge_loop.size(); i++)
+                for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(edge_loop.size()); i++)
                 {
-                    auto p = (i + count_corners[0]) % (int)edge_loop.size();
+                    auto p = (i + count_corners[0]) % static_cast<int>(edge_loop.size());
                     if (p == count_corners[1])
                         break;
                     arclength01 += edge_lengths[edge_loop[p]->id];
                     edgenum01++;
                 }
                 arclength10 = looplength - arclength01;
-                edgenum10 = (int)edge_loop.size() - edgenum01;
+                edgenum10 = static_cast<int>(edge_loop.size()) - edgenum01;
                 int pos = 0;
                 if (arclength01 >= arclength10 && edgenum01 > 1)
                 {

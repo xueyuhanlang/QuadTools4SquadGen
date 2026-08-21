@@ -25,33 +25,33 @@ int main(int argc, char **argv)
         auto result = options.parse(argc, argv);
         if (result.count("help"))
         {
-            std::cout << options.help({"", "Group"}) << std::endl;
-            exit(0);
+            std::cout << options.help({"", "Group"}) << '\n';
+            return 0;
         }
 
         if (!result.count("i"))
         {
-            std::cout << "Please specify input filename!" << std::endl;
-            exit(0);
+            std::cout << "Please specify input filename!\n";
+            return 1;
         }
         auto inputfile = result["i"].as<std::string>();
         if (!std::filesystem::exists(inputfile))
         {
-            std::cout << "The input file does not exist!" << std::endl;
-            exit(0);
+            std::cout << "The input file does not exist!\n";
+            return 1;
         }
         MeshLib::Mesh3D<double> *mesh = load_mesh<double>(inputfile);
         if (!mesh || mesh->get_num_of_faces() == 0 || (!mesh->is_tri() && !mesh->is_quad()))
         {
-            std::cout << "The input mesh is not a valid triangle or quad mesh!" << std::endl;
-            exit(0);
+            std::cout << "The input mesh is not a valid triangle or quad mesh!\n";
+            return 1;
         }
 
         int div = mesh->is_tri() ? 1 : 2;
 
         auto num_facets = std::max(mesh->get_num_of_faces(), ptrdiff_t(1));
         auto target_num = std::max(1, result["n"].as<int>());
-        int L = (int)(std::ceil(log((double)target_num / (div * num_facets)) / log(4.0)));
+        auto L = static_cast<int>(std::ceil(std::log(static_cast<double>(target_num) / (div * num_facets)) / std::log(4.0)));
         auto outputfile = result.count("o") ? result["o"].as<std::string>() : std::filesystem::current_path().string() + "/output.ply";
         auto subdiv_level = std::max(L, result["s"].as<int>());
 
@@ -93,8 +93,8 @@ int main(int argc, char **argv)
     }
     catch (const cxxopts::exceptions::exception &e)
     {
-        std::cout << "Error parsing options: " << e.what() << std::endl;
-        exit(1);
+        std::cout << "Error parsing options: " << e.what() << '\n';
+        return 1;
     }
     return 0;
 }

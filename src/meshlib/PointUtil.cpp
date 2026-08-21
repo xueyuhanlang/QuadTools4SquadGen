@@ -107,27 +107,29 @@ ptrdiff_t MergeSamePoints(const std::vector<TinyVector<Real, 3>> &points,
     // else if (knn_engine == NANOFLANN)
     {
 
-        typedef nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<double, PointCloud<double>>, PointCloud<double>, 3> my_kd_tree_t;
+        using my_kd_tree_t = nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<double, PointCloud<double>>, PointCloud<double>, 3>;
         PointCloud cloud(points);
 
         my_kd_tree_t m_kdtree(3, cloud, nanoflann::KDTreeSingleIndexAdaptorParams(10));
         m_kdtree.buildIndex();
 
-        ptrdiff_t n_pt = (ptrdiff_t)points.size();
+        const auto n_pt = static_cast<ptrdiff_t>(points.size());
         merge2uniqueID_map.assign(n_pt, -1);
         back2overlapID_map.assign(n_pt, -1);
 
         size_t unique_pt_counter = 0;
 
-        for (auto k = 0; k < n_pt; k++)
+        for (ptrdiff_t k = 0; k < n_pt; ++k)
         {
             if (merge2uniqueID_map[k] >= 0)
             {
                 continue;
             } // skip already-found overlap points
-            int K = std::min(8, (int)n_pt);
+            int K = std::min(8, static_cast<int>(n_pt));
             std::vector<size_t> nearest_point_id;
             std::vector<double> distance;
+            nearest_point_id.reserve(static_cast<size_t>(K));
+            distance.reserve(static_cast<size_t>(K));
             bool done = true;
             while (done)
             {
@@ -139,24 +141,24 @@ ptrdiff_t MergeSamePoints(const std::vector<TinyVector<Real, 3>> &points,
                 if (distance[K - 1] < DIST_THRES)
                 {
                     // if all the found K points are within distance threshold, there might be more overlap points.
-                    if (K == (int)points.size())
+                    if (K == static_cast<int>(points.size()))
                         return -1;
-                    K = std::min((int)points.size(), 2 * K);
+                    K = std::min(static_cast<int>(points.size()), 2 * K);
                     continue;
                 }
                 while (distance[K - 1] > DIST_THRES)
                 {
-                    K--;
+                    --K;
                 }
 
-                for (int i = 0; i < K; i++)
+                for (int i = 0; i < K; ++i)
                 {
                     merge2uniqueID_map[nearest_point_id[i]] = unique_pt_counter;
                 }
                 break;
             }
             back2overlapID_map[unique_pt_counter] = k;
-            unique_pt_counter++;
+            ++unique_pt_counter;
         }
 
         return unique_pt_counter;
@@ -178,17 +180,18 @@ void scale_and_PCA(const std::vector<TinyVector<Real, 3>> &sample_points,
 {
     Real x = 0, y = 0, z = 0;
 #pragma omp parallel for reduction(+ : x, y, z)
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)sample_points.size(); i++)
+    const auto sample_point_count = static_cast<ptrdiff_t>(sample_points.size());
+    for (ptrdiff_t i = 0; i < sample_point_count; ++i)
     {
         x += sample_points[i][0], y += sample_points[i][1], z += sample_points[i][2];
     }
-    normalization_center[0] = x / (Real)sample_points.size();
-    normalization_center[1] = y / (Real)sample_points.size();
-    normalization_center[2] = z / (Real)sample_points.size();
+    normalization_center[0] = x / static_cast<Real>(sample_points.size());
+    normalization_center[1] = y / static_cast<Real>(sample_points.size());
+    normalization_center[2] = z / static_cast<Real>(sample_points.size());
 
     Real a00 = 0, a01 = 0, a02 = 0, a11 = 0, a12 = 0, a22 = 0;
 #pragma omp parallel for reduction(+ : a00, a01, a02, a11, a12, a22)
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)sample_points.size(); i++)
+    for (ptrdiff_t i = 0; i < sample_point_count; ++i)
     {
         auto p = sample_points[i] - normalization_center;
         a00 += p[0] * p[0];
@@ -212,13 +215,13 @@ void scale_and_PCA(const std::vector<TinyVector<Real, 3>> &sample_points,
     TinyVector<Real, 3> T2(V[0][2], V[1][2], V[2][2]);
     if (T2.Dot(T0.Cross(T1)) < 0)
     {
-        T0 *= (Real)-1, T1 *= (Real)-1, T2 *= (Real)-1;
+        T0 *= static_cast<Real>(-1), T1 *= static_cast<Real>(-1), T2 *= static_cast<Real>(-1);
     }
 
     Real xmin = std::numeric_limits<Real>::max(), ymin = std::numeric_limits<Real>::max(), zmin = std::numeric_limits<Real>::max();
     Real xmax = std::numeric_limits<Real>::min(), ymax = std::numeric_limits<Real>::min(), zmax = std::numeric_limits<Real>::min();
     normalization_scale = 0;
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)sample_points.size(); i++)
+    for (ptrdiff_t i = 0; i < sample_point_count; ++i)
     {
         auto p = sample_points[i] - normalization_center;
         p[0] = T0 * p, p[1] = T1 * p, p[2] = T2 * p;
@@ -240,19 +243,19 @@ void scale_and_PCA(MeshLib::Mesh3D<Real> *mesh,
                    TinyVector<Real, 3> &normalization_center,
                    Real &normalization_scale, const int num_samples)
 {
-    if (mesh == 0)
+    if (mesh == nullptr)
         return;
 
     PoissonSampling<Real> poisson_sampling;
     std::vector<TinyVector<Real, 3>> sample_points;
     std::vector<ptrdiff_t> sample_point_face_ids;
-    poisson_sampling.sampling((Real)-1, mesh, sample_points, sample_point_face_ids, 0, num_samples);
+    poisson_sampling.sampling(static_cast<Real>(-1), mesh, sample_points, sample_point_face_ids, nullptr, num_samples);
 
     TinyVector<Real, 3> rotation[3];
     scale_and_PCA(sample_points, rotation, inverse_rotation, normalization_center, normalization_scale);
 
 #pragma omp parallel for
-    for (ptrdiff_t i = 0; i < mesh->get_num_of_vertices(); i++)
+    for (ptrdiff_t i = 0; i < mesh->get_num_of_vertices(); ++i)
     {
         auto vert = mesh->get_vertex(i);
         vert->pos -= normalization_center;
@@ -260,7 +263,7 @@ void scale_and_PCA(MeshLib::Mesh3D<Real> *mesh,
         vert->normal = TinyVector<Real, 3>(rotation[0] * vert->normal, rotation[1] * vert->normal, rotation[2] * vert->normal);
     }
 #pragma omp parallel for
-    for (ptrdiff_t i = 0; i < mesh->get_num_of_faces(); i++)
+    for (ptrdiff_t i = 0; i < mesh->get_num_of_faces(); ++i)
     {
         auto face = mesh->get_face(i);
         face->normal = TinyVector<Real, 3>(rotation[0] * face->normal, rotation[1] * face->normal, rotation[2] * face->normal);

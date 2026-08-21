@@ -26,7 +26,7 @@ void mesh_laplacian_smoothing(MeshLib::Mesh3D<Real> *mesh, int iterations, Real 
             Real total_weight = 0, feature_weight = 0;
             do
             {
-                auto weight = 1 / ((vert->pos - edge->vert->pos).SquaredLength() + (Real)1.0e-12);
+                auto weight = 1 / ((vert->pos - edge->vert->pos).SquaredLength() + Real(1.0e-12));
 
                 if (edge->tag || mesh->is_on_boundary(edge))
                 {
@@ -68,7 +68,7 @@ void mesh_winslow_smoothing(MeshLib::Mesh3D<Real> *mesh, int iterations, Real ta
     std::vector<TinyVector<Real, 3>> new_positions(mesh->get_num_of_vertices());
     std::vector<std::vector<ptrdiff_t>> vertex_one_rings(mesh->get_num_of_vertices());
 #pragma omp parallel for schedule(dynamic)
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)mesh->get_num_of_vertices(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(mesh->get_num_of_vertices()); i++)
     {
         auto vert = mesh->get_vertex(i);
         auto he = vert->edge;
@@ -78,18 +78,18 @@ void mesh_winslow_smoothing(MeshLib::Mesh3D<Real> *mesh, int iterations, Real ta
         do
         {
             if (!is_on_boundary)
-                vertex_one_rings[i].push_back(he->vert->id);
+                vertex_one_rings[i].emplace_back(he->vert->id);
             else if (mesh->is_on_boundary(he))
             {
-                vertex_one_rings[i].push_back(he->vert->id);
+                vertex_one_rings[i].emplace_back(he->vert->id);
             }
             if (he->tag)
             {
-                feature_neighbors.push_back(he->vert->id);
+                feature_neighbors.emplace_back(he->vert->id);
             }
             he = he->pair->next;
         } while (he != vert->edge);
-        if (feature_neighbors.size() == 2 && vert->tag == false)
+        if (feature_neighbors.size() == size_t{2} && vert->tag == false)
         {
             vertex_one_rings[i] = feature_neighbors;
         }
@@ -116,24 +116,24 @@ void mesh_winslow_smoothing(MeshLib::Mesh3D<Real> *mesh, int iterations, Real ta
             Real weight = 0, total_weight = 0;
             if (one_ring.size() % 2 != 0)
             {
-                for (auto j = 0; j < one_ring.size(); j++)
+                for (size_t j = 0; j < one_ring.size(); ++j)
                 {
                     weight = 1;
                     center += mesh->get_vertex(one_ring[j])->pos;
                     total_weight += weight;
                 }
             }
-            else if (one_ring.size() == 2)
+            else if (one_ring.size() == size_t{2})
             {
                 center = (mesh->get_vertex(one_ring[0])->pos + mesh->get_vertex(one_ring[1])->pos);
                 total_weight = 2;
             }
             else
             {
-                for (auto j = 0; j < one_ring.size() / 2; j++)
+                for (size_t j = 0, half = one_ring.size() / 2; j < half; ++j)
                 {
-                    weight = 1 / ((mesh->get_vertex(one_ring[j])->pos - mesh->get_vertex(one_ring[(j + one_ring.size() / 2) % one_ring.size()])->pos).SquaredLength() + (Real)1.0e-12);
-                    center += (weight / 2) * (mesh->get_vertex(one_ring[j])->pos + mesh->get_vertex(one_ring[(j + one_ring.size() / 2) % one_ring.size()])->pos);
+                    weight = 1 / ((mesh->get_vertex(one_ring[j])->pos - mesh->get_vertex(one_ring[(j + half) % one_ring.size()])->pos).SquaredLength() + Real(1.0e-12));
+                    center += (weight / 2) * (mesh->get_vertex(one_ring[j])->pos + mesh->get_vertex(one_ring[(j + half) % one_ring.size()])->pos);
                     total_weight += weight;
                 }
             }
@@ -170,6 +170,7 @@ void mesh_taubin_smoothing(MeshLib::Mesh3D<Real> *mesh, int iterations, bool fea
 
     if (feature_aware)
     {
+        constexpr auto pi = Real(3.14159265358979323846);
 #pragma omp parallel for
         for (ptrdiff_t i = 0; i < mesh->get_num_of_edges(); i += 2)
         {
@@ -178,7 +179,7 @@ void mesh_taubin_smoothing(MeshLib::Mesh3D<Real> *mesh, int iterations, bool fea
             auto face2 = edge->pair->face;
             if (face1 && face2)
             {
-                Real angle = std::acos(std::min((Real)1, std::max(-(Real)1, face1->normal.Dot(face2->normal)))) * 180 / (Real)3.14159265358979323846;
+                Real angle = std::acos(std::min(Real(1), std::max(-Real(1), face1->normal.Dot(face2->normal)))) * 180 / pi;
                 if (angle >= sharp_angle_in_degree)
                 {
                     edge->tag = true;
@@ -190,10 +191,10 @@ void mesh_taubin_smoothing(MeshLib::Mesh3D<Real> *mesh, int iterations, bool fea
 
     for (int iter = 0; iter < iterations; iter++)
     {
-        // mesh_winslow_smoothing<Real>(mesh, 1, (Real)0.4507499669);
-        // mesh_winslow_smoothing<Real>(mesh, 1, (Real)-0.4720265626);
-        mesh_laplacian_smoothing<Real>(mesh, 1, (Real)0.4507499669);
-        mesh_laplacian_smoothing<Real>(mesh, 1, (Real)-0.4720265626);
+        // mesh_winslow_smoothing<Real>(mesh, 1, Real(0.4507499669));
+        // mesh_winslow_smoothing<Real>(mesh, 1, Real(-0.4720265626));
+        mesh_laplacian_smoothing<Real>(mesh, 1, Real(0.4507499669));
+        mesh_laplacian_smoothing<Real>(mesh, 1, Real(-0.4720265626));
     }
     mesh->update_normal();
 }

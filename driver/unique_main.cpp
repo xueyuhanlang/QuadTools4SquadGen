@@ -35,15 +35,15 @@ int main(int argc, char **argv)
         auto result = options.parse(argc, argv);
         if (result.count("help"))
         {
-            std::cout << options.help({"", "Group"}) << std::endl;
-            exit(0);
+            std::cout << options.help({"", "Group"}) << '\n';
+            return 0;
         }
         namespace fs = std::filesystem;
         auto inputdir = result["i"].as<std::string>();
         if (!fs::exists(inputdir))
         {
-            std::cout << "Input directory does not exist!" << std::endl;
-            exit(0);
+            std::cout << "Input directory does not exist!\n";
+            return 1;
         }
         auto outputdir = result["o"].as<std::string>();
         if (!fs::exists(outputdir))
@@ -58,10 +58,10 @@ int main(int argc, char **argv)
             std::ifstream databasein("database.bin", std::ios::in | std::ios::binary);
             if (!databasein.is_open())
             {
-                std::cout << "Error opening database file!" << std::endl;
-                exit(0);
+                std::cout << "Error opening database file!\n";
+                return 1;
             }
-            std::cout << "Reading database..." << std::endl;
+            std::cout << "Reading database...\n";
             size_t datanum = 0;
             databasein.read(reinterpret_cast<char *>(&datanum), sizeof(datanum));
             for (size_t i = 0; i < datanum; i++)
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
                 }
             }
             databasein.close();
-            std::cout << "Database read successfully!" << std::endl;
+            std::cout << "Database read successfully!\n";
         }
 
         double bound_threshold = 0.05; // 0.05; // 0.01; //0.001;
@@ -134,8 +134,8 @@ int main(int argc, char **argv)
                         {
                             const auto &msize = bbox_info[i];
                             auto diff = msize - size;
-                            auto max_diff = std::max({fabs(diff[0]), fabs(diff[1]), fabs(diff[2])});
-                            auto max_side = std::max({fabs(msize[0]), fabs(msize[1]), fabs(msize[2])});
+                            auto max_diff = std::max({std::abs(diff[0]), std::abs(diff[1]), std::abs(diff[2])});
+                            auto max_side = std::max({std::abs(msize[0]), std::abs(msize[1]), std::abs(msize[2])});
                             if (max_diff / max_side < bound_threshold)
                             {
                                 find_duplicate = true;
@@ -152,7 +152,7 @@ int main(int argc, char **argv)
                         mesh_modifed = true;
                         duplicate_count++;
                         if (duplicate_count % 1000 == 0)
-                            std::cout << "Duplicate count: " << duplicate_count << std::endl;
+                            std::cout << "Duplicate count: " << duplicate_count << '\n';
                         delete submesh;
                         continue;
                     }
@@ -239,7 +239,7 @@ int main(int argc, char **argv)
 
                 file_count++;
                 if (file_count % 1000 == 0)
-                    std::cout << "File count: " << file_count << std::endl;
+                    std::cout << "File count: " << file_count << '\n';
             }
         }
 
@@ -263,13 +263,13 @@ int main(int argc, char **argv)
                 }
             }
             databaseout.close();
-            std::cout << "Database written successfully!" << std::endl;
+            std::cout << "Database written successfully!\n";
         }
     }
     catch (const cxxopts::exceptions::exception &e)
     {
-        std::cout << "Error parsing options: " << e.what() << std::endl;
-        exit(0);
+        std::cout << "Error parsing options: " << e.what() << '\n';
+        return 1;
     }
     return 0;
 }
@@ -289,15 +289,15 @@ int main(int argc, char **argv)
     auto result = options.parse(argc, argv);
     if (result.count("help"))
     {
-        std::cout << options.help({"", "Group"}) << std::endl;
-        exit(0);
+        std::cout << options.help({"", "Group"}) << '\n';
+        return 0;
     }
     namespace fs = std::filesystem;
     auto inputdir = result["i"].as<std::string>();
     if (!fs::exists(inputdir))
     {
-        std::cout << "Input directory does not exist!" << std::endl;
-        exit(0);
+        std::cout << "Input directory does not exist!\n";
+        return 1;
     }
     auto outputdir = result["o"].as<std::string>();
     if (!fs::exists(outputdir))
@@ -307,7 +307,7 @@ int main(int argc, char **argv)
 
 #ifdef WRITE_INFO
     auto outfilename = outputdir + "/mesh_info.bin";
-    std::cout << "Output file: " << outfilename << std::endl;
+    std::cout << "Output file: " << outfilename << '\n';
     // if (fs::exists(outfilename))
     // {
     //     std::cout << "The directory has been processed!" << std::endl;
@@ -359,7 +359,7 @@ int main(int argc, char **argv)
             {
                 if (submesh->is_quad() == false)
                 {
-                    std::cout << "non_quad" << std::endl;
+                    std::cout << "non_quad\n";
                     count++;
                     continue;
                 }
@@ -509,7 +509,7 @@ int main(int argc, char **argv)
     std::ofstream info_file(outputdir + "/mesh_info.bin", std::ios::binary);
     if (!info_file.is_open())
     {
-        std::cerr << "Error opening info file for writing!" << std::endl;
+        std::cerr << "Error opening info file for writing!\n";
         return 1;
     }
     else
@@ -554,65 +554,4 @@ int main(int argc, char **argv)
 
     return 0;
 }
-// int main(int argc, char **argv)
-// {
-//     try
-//     {
-//         cxxopts::Options options("Unique", "Unique (author: Yang Liu, Email: yangliu@microsoft.com)");
-//         options
-//             .positional_help("[optional args]")
-//             .show_positional_help()
-//             .allow_unrecognised_options()
-//             .add_options()                                            //
-//             ("i,input", "input dir", cxxopts::value<std::string>())   //
-//             ("o,output", "output dir", cxxopts::value<std::string>()) //
-//             ("h,help", "Print help");                                 //
-
-//         auto result = options.parse(argc, argv);
-//         if (result.count("help"))
-//         {
-//             std::cout << options.help({"", "Group"}) << std::endl;
-//             exit(0);
-//         }
-//         namespace fs = std::filesystem;
-//         auto inputdir = result["i"].as<std::string>();
-//         if (!fs::exists(inputdir))
-//         {
-//             std::cout << "Input directory does not exist!" << std::endl;
-//             exit(0);
-//         }
-//         auto outputdir = result["o"].as<std::string>();
-//         if (!fs::exists(outputdir))
-//         {
-//             fs::create_directories(outputdir);
-//         }
-//         std::vector<std::string> plyfilelist, filenamelist;
-//         plyfilelist.reserve(10000), filenamelist.reserve(10000);
-//         for (const auto &entry : fs::recursive_directory_iterator(inputdir))
-//         {
-//             if (entry.is_regular_file() && entry.path().extension() == ".ply")
-//             {
-//                 plyfilelist.emplace_back(entry.path().string());
-//                 filenamelist.emplace_back(entry.path().filename().string());
-//             }
-//         }
-// #pragma omp parallel for schedule(dynamic)
-//         for (int i = 0; i < (int)plyfilelist.size(); i++)
-//         {
-//             std::string output_path = result["o"].as<std::string>() + "/" + filenamelist[i];
-//             merge_ply_mesh_enhanced<double>(plyfilelist[i], output_path);
-//             // bool suc = merge_ply_mesh<double>(plyfilelist[i], output_path);
-//             // if (!suc)
-//             // {
-//             //     std::filesystem::copy_file(plyfilelist[i], output_path, fs::copy_options::overwrite_existing);
-//             // }
-//         }
-//     }
-//     catch (const cxxopts::exceptions::exception &e)
-//     {
-//         std::cout << "Error parsing options: " << e.what() << std::endl;
-//         exit(0);
-//     }
-//     return 0;
-// }
 #endif

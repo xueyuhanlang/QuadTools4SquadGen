@@ -61,7 +61,7 @@ protected:
 	int block_num, resolution, subdiv_level, seed;
 	float perturb_level, scale_range;
 	bool use_ccsubdiv;
-	MeshLib::Mesh3D<Real> *quad_mesh = 0;
+	MeshLib::Mesh3D<Real> *quad_mesh = nullptr;
 	const int neighbor[6][3] = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}};
 	const int two_step_neighbor[12][3] = {
 		{1, 1, 0}, {1, -1, 0}, {-1, -1, 0}, {-1, 1, 0}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}, {-1, 0, 1}, {0, 1, 1}, {0, 1, -1}, {0, -1, -1}, {0, -1, 1}};
@@ -71,4 +71,4 @@ protected:
 	int mesh_genus = 0;
 };
 
-typedef BlockGen<double> blockgen_3d;
+using blockgen_3d = BlockGen<double>;

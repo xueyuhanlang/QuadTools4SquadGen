@@ -56,7 +56,7 @@ void improve_mesh_topology(std::vector<TinyVector<Real, 3>> &vertices,
 
     // recreate mesh
     MeshLib::Mesh3D<Real> *new_quad_mesh = new MeshLib::Mesh3D<Real>;
-    std::vector<MeshLib::HE_vert<Real> *> vertice_id_map(m_quadmesh->get_num_of_vertices(), 0);
+    std::vector<MeshLib::HE_vert<Real> *> vertice_id_map(m_quadmesh->get_num_of_vertices(), nullptr);
     for (auto i = 0; i < m_quadmesh->get_num_of_vertices(); i++)
     {
         auto vert = m_quadmesh->get_vertex(i);
@@ -282,8 +282,8 @@ void improve_mesh_topology(std::vector<TinyVector<Real, 3>> &vertices,
                 case0_center += vertexlist[j]->pos;
                 case1_center += vertexlist[j + 1]->pos;
             }
-            case0_center /= (Real)(vertexlist.size() / 2);
-            case1_center /= (Real)(vertexlist.size() / 2);
+            case0_center /= static_cast<Real>(vertexlist.size() / 2);
+            case1_center /= static_cast<Real>(vertexlist.size() / 2);
 
             Real quality_case0 = 0, quality_case1 = 0;
             for (auto j = 0; j < vertexlist.size(); j += 2)
@@ -337,7 +337,7 @@ void improve_mesh_topology(std::vector<TinyVector<Real, 3>> &vertices,
 
             if (update_vert_degree[v1->id] == 3 && update_vert_degree[v3->id] == 3 && update_vert_degree[v5->id] == 3)
             {
-                auto c = new_quad_mesh->insert_vertex((v1->pos + v3->pos + v5->pos) / (Real)3);
+                auto c = new_quad_mesh->insert_vertex((v1->pos + v3->pos + v5->pos) / static_cast<Real>(3));
                 facelist = {vertice_id_map[v0->id], vertice_id_map[v1->id], c, vertice_id_map[v5->id]};
                 new_quad_mesh->insert_face(facelist);
                 facelist = {vertice_id_map[v1->id], vertice_id_map[v2->id], vertice_id_map[v3->id], c};
@@ -352,7 +352,7 @@ void improve_mesh_topology(std::vector<TinyVector<Real, 3>> &vertices,
             }
             else if (update_vert_degree[v0->id] == 3 && update_vert_degree[v2->id] == 3 && update_vert_degree[v4->id] == 3)
             {
-                auto c = new_quad_mesh->insert_vertex((v0->pos + v2->pos + v4->pos) / (Real)3);
+                auto c = new_quad_mesh->insert_vertex((v0->pos + v2->pos + v4->pos) / static_cast<Real>(3));
                 facelist = {vertice_id_map[v0->id], vertice_id_map[v1->id], vertice_id_map[v2->id], c};
                 new_quad_mesh->insert_face(facelist);
                 facelist = {vertice_id_map[v2->id], vertice_id_map[v3->id], vertice_id_map[v4->id], c};
@@ -651,7 +651,7 @@ void improve_mesh_topology(std::vector<TinyVector<Real, 3>> &vertices,
                 continue;
             auto edge = vert->edge;
             int status = 1;
-            MeshLib::HE_edge<Real> *start_edge = 0;
+            MeshLib::HE_edge<Real> *start_edge = nullptr;
             Real quality = std::numeric_limits<Real>::max();
             Real orginal_quality = 0;
             do
@@ -666,7 +666,7 @@ void improve_mesh_topology(std::vector<TinyVector<Real, 3>> &vertices,
 
                 if (update_vert_degree[edge->vert->id] == 4 && update_vert_degree[edge->pair->next->pair->next->pair->next->vert->id] == 4)
                 {
-                    if (start_edge == 0)
+                    if (start_edge == nullptr)
                     {
                         start_edge = edge;
                         quality = handle_degree_6_vertex(vert, edge);
@@ -683,7 +683,7 @@ void improve_mesh_topology(std::vector<TinyVector<Real, 3>> &vertices,
                 }
                 edge = edge->pair->next;
             } while (edge != vert->edge);
-            if (status == 0 || start_edge == 0)
+            if (status == 0 || start_edge == nullptr)
                 continue;
 
             orginal_quality /= 6;
@@ -755,7 +755,7 @@ void improve_mesh_topology(std::vector<TinyVector<Real, 3>> &vertices,
         auto face = m_quadmesh->get_face(i);
         if (face->tag)
             continue;
-        facelist.resize(0);
+        facelist.clear();
         auto edge = face->edge;
         do
         {
@@ -796,10 +796,10 @@ void improve_mesh_topology(std::vector<TinyVector<Real, 3>> &vertices,
         if (casequadinsert > 0)
             std::cout << casequadinsert << " quad insert cases, ";
 
-        std::cout << std::endl;
+        std::cout << '\n';
     }
     else
-        std::cout << "mesh repair: no cases handled." << std::endl;
+        std::cout << "mesh repair: no cases handled." << '\n';
 
     // m_quadmesh->write_obj("improved_mesh.obj");
     mesh_to_vertices_and_faces(m_quadmesh, vertices, polygons);

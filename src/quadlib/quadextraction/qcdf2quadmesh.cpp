@@ -24,7 +24,7 @@ QCDF2QuadMesh<Real>::QCDF2QuadMesh(MeshLib::Mesh3D<Real> *mesh, const std::strin
     auto start = high_resolution_clock::now();
     if (!load_feature(featurefile))
     {
-        std::cerr << "Cannot load the feature file!" << std::endl;
+        std::cerr << "Cannot load the feature file!" << '\n';
         throw std::runtime_error("Cannot load the feature file!");
     }
     auto stop = high_resolution_clock::now();
@@ -89,7 +89,7 @@ void QCDF2QuadMesh<Real>::set_smooth_num(unsigned int num)
 template <typename Real>
 void QCDF2QuadMesh<Real>::set_edge_collapse_ratio(const Real ratio)
 {
-    edge_collapse_ratio = std::min(std::max(ratio, (Real)0), (Real)1);
+    edge_collapse_ratio = std::min(std::max(ratio, static_cast<Real>(0)), static_cast<Real>(1));
 }
 template <typename Real>
 void QCDF2QuadMesh<Real>::set_edge_collapse_normal_threshold(const Real angle_in_degree)
@@ -105,24 +105,24 @@ void QCDF2QuadMesh<Real>::export_mesh(const FaceClusterType type, const std::str
     if (m_debug_mode)
     {
         // print all parameters
-        std::cout << "-- QCDF2QuadMesh parameters --" << std::endl;
-        std::cout << "Debug mode is on." << std::endl;
-        std::cout << "Confusion band: " << confuse_band << std::endl;
-        std::cout << "Sharp feature angle: " << sharp_feature_angle << std::endl;
-        std::cout << "Ring size: " << ring_size << std::endl;
-        std::cout << "Normalize input mesh: " << (normalize_input ? "true" : "false") << std::endl;
-        std::cout << "Improve mode: " << (improve_mode ? "true" : "false") << std::endl;
-        std::cout << "Subdivision number: " << subdiv_num << std::endl;
-        std::cout << "Smoothing number: " << smooth_num << std::endl;
-        std::cout << "Edge collapse ratio: " << edge_collapse_ratio << std::endl;
-        std::cout << "Edge collapse normal threshold: " << edge_collapse_normal_threshold << std::endl;
-        std::cout << "Pattern subdivision: " << (pattern_subdivision ? "true" : "false") << std::endl;
-        std::cout << "------------------------------" << std::endl;
+        std::cout << "-- QCDF2QuadMesh parameters --" << '\n';
+        std::cout << "Debug mode is on." << '\n';
+        std::cout << "Confusion band: " << confuse_band << '\n';
+        std::cout << "Sharp feature angle: " << sharp_feature_angle << '\n';
+        std::cout << "Ring size: " << ring_size << '\n';
+        std::cout << "Normalize input mesh: " << (normalize_input ? "true" : "false") << '\n';
+        std::cout << "Improve mode: " << (improve_mode ? "true" : "false") << '\n';
+        std::cout << "Subdivision number: " << subdiv_num << '\n';
+        std::cout << "Smoothing number: " << smooth_num << '\n';
+        std::cout << "Edge collapse ratio: " << edge_collapse_ratio << '\n';
+        std::cout << "Edge collapse normal threshold: " << edge_collapse_normal_threshold << '\n';
+        std::cout << "Pattern subdivision: " << (pattern_subdivision ? "true" : "false") << '\n';
+        std::cout << "------------------------------" << '\n';
     }
 
     if (type == FaceClusterType::FC_UNDEFINED)
     {
-        std::cerr << "Undefined face cluster type!" << std::endl;
+        std::cerr << "Undefined face cluster type!" << '\n';
         throw std::runtime_error("Undefined face cluster type!");
     }
 
@@ -134,13 +134,13 @@ void QCDF2QuadMesh<Real>::export_mesh(const FaceClusterType type, const std::str
     auto duration = duration_cast<milliseconds>(stop - start);
     if (m_verbose)
     {
-        std::cout << "quad extraction time: " << duration.count() << " ms" << std::endl;
-        std::cout << quad_vertices.size() << " vertices and " << quad_faces.size() << " faces generated." << std::endl;
+        std::cout << "quad extraction time: " << duration.count() << " ms" << '\n';
+        std::cout << quad_vertices.size() << " vertices and " << quad_faces.size() << " faces generated." << '\n';
     }
     if (quad_faces.empty())
     {
         if (m_verbose)
-            std::cerr << "No quad mesh is generated!" << std::endl;
+            std::cerr << "No quad mesh is generated!" << '\n';
     }
     else
     {
@@ -160,10 +160,10 @@ void QCDF2QuadMesh<Real>::subdivide_trimesh(const int level)
     if (level <= 0)
         return;
     if (m_verbose)
-        std::cout << "Performing subdivision with level " << level << " for increasing the resolution!" << std::endl;
+        std::cout << "Performing subdivision with level " << level << " for increasing the resolution!" << '\n';
     MeshLib::Mesh3D<Real> *mesh = m_pmesh;
 
-    size_t div = (size_t)pow(4, level);
+    size_t div = static_cast<size_t>(pow(4, level));
     ptrdiff_t nv = m_pmesh->get_num_of_vertices(), ne = m_pmesh->get_num_of_edges() / 2, nf = m_pmesh->get_num_of_faces();
     std::vector<Real> vertex_cdf_colors(nv, 0), vertex_dcdf_colors(nv, 0);
     std::vector<TinyVector<Real, 3>> vertex_cdf_offsets(nv), vertex_dcdf_offsets(nv);
@@ -213,7 +213,7 @@ void QCDF2QuadMesh<Real>::subdivide_trimesh(const int level)
         MeshLib::Mesh3D<Real> *submesh = sub.SplitTri(&vert_color_comb);
 
 #pragma omp parallel for
-        for (ptrdiff_t i = mesh->get_num_of_vertices(); i < (ptrdiff_t)vert_color_comb.size(); i++)
+        for (ptrdiff_t i = mesh->get_num_of_vertices(); i < static_cast<ptrdiff_t>(vert_color_comb.size()); i++)
         {
             auto hv = submesh->get_vertex(i);
             auto comb = vert_color_comb[i];
@@ -236,10 +236,10 @@ void QCDF2QuadMesh<Real>::subdivide_trimesh(const int level)
         {
             auto hf = submesh->get_face(i);
             auto he = hf->edge;
-            face_cdf_colors[i] = (vertex_cdf_colors[he->vert->id] + vertex_cdf_colors[he->next->vert->id] + vertex_cdf_colors[he->next->next->vert->id]) / (Real)3.0;
-            face_dcdf_colors[i] = (vertex_dcdf_colors[he->vert->id] + vertex_dcdf_colors[he->next->vert->id] + vertex_dcdf_colors[he->next->next->vert->id]) / (Real)3.0;
-            coffset[i] = (vertex_cdf_offsets[he->vert->id] + vertex_cdf_offsets[he->next->vert->id] + vertex_cdf_offsets[he->next->next->vert->id]) / (Real)3.0;
-            doffset[i] = (vertex_dcdf_offsets[he->vert->id] + vertex_dcdf_offsets[he->next->vert->id] + vertex_dcdf_offsets[he->next->next->vert->id]) / (Real)3.0;
+            face_cdf_colors[i] = (vertex_cdf_colors[he->vert->id] + vertex_cdf_colors[he->next->vert->id] + vertex_cdf_colors[he->next->next->vert->id]) / static_cast<Real>(3.0);
+            face_dcdf_colors[i] = (vertex_dcdf_colors[he->vert->id] + vertex_dcdf_colors[he->next->vert->id] + vertex_dcdf_colors[he->next->next->vert->id]) / static_cast<Real>(3.0);
+            coffset[i] = (vertex_cdf_offsets[he->vert->id] + vertex_cdf_offsets[he->next->vert->id] + vertex_cdf_offsets[he->next->next->vert->id]) / static_cast<Real>(3.0);
+            doffset[i] = (vertex_dcdf_offsets[he->vert->id] + vertex_dcdf_offsets[he->next->vert->id] + vertex_dcdf_offsets[he->next->next->vert->id]) / static_cast<Real>(3.0);
         }
         auto max_cdf_color = *std::max_element(face_cdf_colors.begin(), face_cdf_colors.end());
         auto min_cdf_color = *std::min_element(face_cdf_colors.begin(), face_cdf_colors.end());
@@ -285,11 +285,11 @@ int QCDF2QuadMesh<Real>::identify_seed_faces(const FaceClusterType type, std::ve
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_faces(); i++)
     {
         Real jitter = dist(rng);
-        // jittered_face_colors[i] = std::max(0.0, std::min(face_colors[i] + jitter, (Real)1.0));
+        // jittered_face_colors[i] = std::max(0.0, std::min(face_colors[i] + jitter, static_cast<Real>(1.0)));
         jittered_face_colors[i] = face_colors[i] + jitter;
     }
 
-    // Real color_bound = (Real)0.1;
+    // Real color_bound = static_cast<Real>(0.1);
     int num_seeds = 0;
 #pragma omp parallel for schedule(dynamic) reduction(+ : num_seeds)
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_faces(); i++)
@@ -306,7 +306,7 @@ int QCDF2QuadMesh<Real>::identify_seed_faces(const FaceClusterType type, std::ve
         bool stop_search = false;
         for (int ring = 0; ring < ring_size; ring++)
         {
-            next_ring.resize(0);
+            next_ring.clear();
             for (size_t j = 0; j < current_ring.size(); j++)
             {
                 auto hf = m_pmesh->get_face(current_ring[j]);
@@ -379,9 +379,9 @@ void QCDF2QuadMesh<Real>::init()
     {
         // center and normalize the mesh for better visualization
         global_scale = std::max(std::max(m_pmesh->xmax - m_pmesh->xmin, m_pmesh->ymax - m_pmesh->ymin), m_pmesh->zmax - m_pmesh->zmin) / 10;
-        TinyVector<Real, 3> center((m_pmesh->xmax + m_pmesh->xmin) / (Real)2,
-                                   (m_pmesh->ymax + m_pmesh->ymin) / (Real)2,
-                                   (m_pmesh->zmax + m_pmesh->zmin) / (Real)2);
+        TinyVector<Real, 3> center((m_pmesh->xmax + m_pmesh->xmin) / static_cast<Real>(2),
+                                   (m_pmesh->ymax + m_pmesh->ymin) / static_cast<Real>(2),
+                                   (m_pmesh->zmax + m_pmesh->zmin) / static_cast<Real>(2));
 #pragma omp parallel for
         for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_vertices(); i++)
         {
@@ -439,9 +439,9 @@ void QCDF2QuadMesh<Real>::init()
     extract_trimesh_featurelines(vertex_feature_tag, feature_edge_loops);
 
     // std::vector<bool> edge_tags(trimesh_feature_edge_tags.begin(), trimesh_feature_edge_tags.end());
-    // SaveMarkedEdge_as_ply(m_pmesh, path_concatenate(debug_dir, "trimesh_feature_edges.ply"), edge_tags, global_scale * (Real)0.001);
+    // SaveMarkedEdge_as_ply(m_pmesh, path_concatenate(debug_dir, "trimesh_feature_edges.ply"), edge_tags, global_scale * static_cast<Real>(0.001));
     // std::vector<bool> edge_tags(color_feature_edge_tags.begin(), color_feature_edge_tags.end());
-    // SaveMarkedEdge_as_ply(m_pmesh, path_concatenate(debug_dir, "color_feature_edges.ply"), edge_tags, global_scale * (Real)0.001);
+    // SaveMarkedEdge_as_ply(m_pmesh, path_concatenate(debug_dir, "color_feature_edges.ply"), edge_tags, global_scale * static_cast<Real>(0.001));
 
     tri_mesh_vertex_cdfdcdf_types.assign(m_pmesh->get_num_of_vertices(), -1);
 }
@@ -452,7 +452,7 @@ void QCDF2QuadMesh<Real>::feature_edge_travel(MeshLib::HE_edge<Real> *start_edge
                                               std::vector<int> &feature_edge_tag,
                                               std::vector<MeshLib::HE_vert<Real> *> &loop_vertices)
 {
-    loop_vertices.resize(0);
+    loop_vertices.clear();
     if (feature_edge_tag[start_edge->id] != 1)
         return;
     loop_vertices.push_back(start_edge->pair->vert);
@@ -534,9 +534,9 @@ void QCDF2QuadMesh<Real>::extract_trimesh_featurelines(
     // }
     // SavePtsPLY(path_concatenate(debug_dir, "trimesh_feature_vertices.ply"), feature_points);
 
-    // std::cout << std::count(feature_edge_tag.begin(), feature_edge_tag.end(), 1) / 2<< " feature edges in trimesh" << std::endl;
+    // std::cout << std::count(feature_edge_tag.begin(), feature_edge_tag.end(), 1) / 2<< " feature edges in trimesh" << '\n';
 
-    feature_edge_loops.resize(0);
+    feature_edge_loops.clear();
     std::vector<MeshLib::HE_vert<Real> *> loop_vertices;
 
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_vertices(); i++)
@@ -566,8 +566,8 @@ void QCDF2QuadMesh<Real>::extract_trimesh_featurelines(
         feature_edge_travel(edge, vertex_feature_tag, feature_edge_tag, loop_vertices);
         feature_edge_loops.emplace_back(loop_vertices);
     }
-    // std::cout << feature_edge_loops.size() << " feature edge loops in trimesh" << std::endl;
-    // std::cout << std::count(vertex_feature_tag.begin(), vertex_feature_tag.end(), 1) << " feature vertices in trimesh" << std::endl;
+    // std::cout << feature_edge_loops.size() << " feature edge loops in trimesh" << '\n';
+    // std::cout << std::count(vertex_feature_tag.begin(), vertex_feature_tag.end(), 1) << " feature vertices in trimesh" << '\n';
 }
 /////////////////////////////////
 template <typename Real>
@@ -578,7 +578,7 @@ bool QCDF2QuadMesh<Real>::load_feature(const std::string &featurefile)
         npy::inpzstream input(featurefile);
         if (!input.is_open())
         {
-            std::cerr << "Cannot open the feature file!" << std::endl;
+            std::cerr << "Cannot open the feature file!" << '\n';
             return false;
         }
 
@@ -590,10 +590,10 @@ bool QCDF2QuadMesh<Real>::load_feature(const std::string &featurefile)
             has_vertex_info = true;
         else if (cdf.shape()[0] != m_pmesh->get_num_of_faces())
         {
-            std::cout << featurefile << " has " << cdf.shape()[0] << " entries, but the input mesh has " << m_pmesh->get_num_of_faces() << " faces and " << m_pmesh->get_num_of_vertices() << " vertices." << std::endl;
+            std::cout << featurefile << " has " << cdf.shape()[0] << " entries, but the input mesh has " << m_pmesh->get_num_of_faces() << " faces and " << m_pmesh->get_num_of_vertices() << " vertices." << '\n';
             throw std::runtime_error("The number of entries in the feature file does not match with the input mesh!");
         }
-        int nfaces = (int)m_pmesh->get_num_of_faces();
+        int nfaces = static_cast<int>(m_pmesh->get_num_of_faces());
 
         auto offsetd = input.read<float>("offset.npy");
         auto offsetc = input.read<float>("offsetc.npy");
@@ -607,22 +607,22 @@ bool QCDF2QuadMesh<Real>::load_feature(const std::string &featurefile)
 #pragma omp parallel for
         for (int i = 0; i < nfaces; i++)
         {
-            face_dcdf_colors[i] = (Real)dcdf(i, 0);
-            face_cdf_colors[i] = (Real)cdf(i, 0);
-            face_dcdf_colors[i] = std::clamp(face_dcdf_colors[i], (Real)0, (Real)1);
-            face_cdf_colors[i] = std::clamp(face_cdf_colors[i], (Real)0, (Real)1);
-            doffset[i][0] = (Real)offsetd(i, 0);
-            doffset[i][1] = (Real)offsetd(i, 1);
-            doffset[i][2] = (Real)offsetd(i, 2);
-            coffset[i][0] = (Real)offsetc(i, 0);
-            coffset[i][1] = (Real)offsetc(i, 1);
-            coffset[i][2] = (Real)offsetc(i, 2);
-            // boffset[i][0] = (Real)offsetb(i, 0);
-            // boffset[i][1] = (Real)offsetb(i, 1);
-            // boffset[i][2] = (Real)offsetb(i, 2);
-            // aoffset[i][0] = (Real)offseta(i, 0);
-            // aoffset[i][1] = (Real)offseta(i, 1);
-            // aoffset[i][2] = (Real)offseta(i, 2);
+            face_dcdf_colors[i] = static_cast<Real>(dcdf(i, 0));
+            face_cdf_colors[i] = static_cast<Real>(cdf(i, 0));
+            face_dcdf_colors[i] = std::clamp(face_dcdf_colors[i], static_cast<Real>(0), static_cast<Real>(1));
+            face_cdf_colors[i] = std::clamp(face_cdf_colors[i], static_cast<Real>(0), static_cast<Real>(1));
+            doffset[i][0] = static_cast<Real>(offsetd(i, 0));
+            doffset[i][1] = static_cast<Real>(offsetd(i, 1));
+            doffset[i][2] = static_cast<Real>(offsetd(i, 2));
+            coffset[i][0] = static_cast<Real>(offsetc(i, 0));
+            coffset[i][1] = static_cast<Real>(offsetc(i, 1));
+            coffset[i][2] = static_cast<Real>(offsetc(i, 2));
+            // boffset[i][0] = static_cast<Real>(offsetb(i, 0));
+            // boffset[i][1] = static_cast<Real>(offsetb(i, 1));
+            // boffset[i][2] = static_cast<Real>(offsetb(i, 2));
+            // aoffset[i][0] = static_cast<Real>(offseta(i, 0));
+            // aoffset[i][1] = static_cast<Real>(offseta(i, 1));
+            // aoffset[i][2] = static_cast<Real>(offseta(i, 2));
         }
 
         //         Real max_dcdf_color = *std::max_element(face_dcdf_colors.begin(), face_dcdf_colors.end());
@@ -634,34 +634,34 @@ bool QCDF2QuadMesh<Real>::load_feature(const std::string &featurefile)
         // #pragma omp parallel for
         //         for (ptrdiff_t i = 0; i < nfaces; i++)
         //         {
-        //             face_dcdf_colors[i] = (face_dcdf_colors[i] - min_dcdf_color) / (dcdf_range + (Real)1e-8);
-        //             face_cdf_colors[i] = (face_cdf_colors[i] - min_cdf_color) / (cdf_range + (Real)1e-8);
+        //             face_dcdf_colors[i] = (face_dcdf_colors[i] - min_dcdf_color) / (dcdf_range + static_cast<Real>(1e-8));
+        //             face_cdf_colors[i] = (face_cdf_colors[i] - min_cdf_color) / (cdf_range + static_cast<Real>(1e-8));
         //         }
 
         if (has_vertex_info)
         {
-            int nverts = (int)m_pmesh->get_num_of_vertices();
+            int nverts = static_cast<int>(m_pmesh->get_num_of_vertices());
             vertex_cdf_colors.resize(nverts);
             vertex_dcdf_colors.resize(nverts);
             v_coffset.resize(nverts);
             v_doffset.resize(nverts);
 #pragma omp parallel for
-            for (int i = 0; i < (int)nverts; i++)
+            for (int i = 0; i < static_cast<int>(nverts); i++)
             {
-                vertex_dcdf_colors[i] = (Real)dcdf(nfaces + i, 0);
-                vertex_cdf_colors[i] = (Real)cdf(nfaces + i, 0);
-                vertex_dcdf_colors[i] = std::clamp(vertex_dcdf_colors[i], (Real)0, (Real)1);
-                vertex_cdf_colors[i] = std::clamp(vertex_cdf_colors[i], (Real)0, (Real)1);
-                v_doffset[i][0] = (Real)offsetd(nfaces + i, 0);
-                v_doffset[i][1] = (Real)offsetd(nfaces + i, 1);
-                v_doffset[i][2] = (Real)offsetd(nfaces + i, 2);
-                v_coffset[i][0] = (Real)offsetc(nfaces + i, 0);
-                v_coffset[i][1] = (Real)offsetc(nfaces + i, 1);
-                v_coffset[i][2] = (Real)offsetc(nfaces + i, 2);
+                vertex_dcdf_colors[i] = static_cast<Real>(dcdf(nfaces + i, 0));
+                vertex_cdf_colors[i] = static_cast<Real>(cdf(nfaces + i, 0));
+                vertex_dcdf_colors[i] = std::clamp(vertex_dcdf_colors[i], static_cast<Real>(0), static_cast<Real>(1));
+                vertex_cdf_colors[i] = std::clamp(vertex_cdf_colors[i], static_cast<Real>(0), static_cast<Real>(1));
+                v_doffset[i][0] = static_cast<Real>(offsetd(nfaces + i, 0));
+                v_doffset[i][1] = static_cast<Real>(offsetd(nfaces + i, 1));
+                v_doffset[i][2] = static_cast<Real>(offsetd(nfaces + i, 2));
+                v_coffset[i][0] = static_cast<Real>(offsetc(nfaces + i, 0));
+                v_coffset[i][1] = static_cast<Real>(offsetc(nfaces + i, 1));
+                v_coffset[i][2] = static_cast<Real>(offsetc(nfaces + i, 2));
             }
             // clip the color values to [0,1]
-            // std::clamp(vertex_dcdf_colors.begin(), vertex_dcdf_colors.end(), (Real)0, (Real)1);
-            // std::clamp(vertex_cdf_colors.begin(), vertex_cdf_colors.end(), (Real)0, (Real)1);
+            // std::clamp(vertex_dcdf_colors.begin(), vertex_dcdf_colors.end(), static_cast<Real>(0), static_cast<Real>(1));
+            // std::clamp(vertex_cdf_colors.begin(), vertex_cdf_colors.end(), static_cast<Real>(0), static_cast<Real>(1));
 
             //             Real max_dcdf_color = *std::max_element(vertex_dcdf_colors.begin(), vertex_dcdf_colors.end());
             //             Real min_dcdf_color = *std::min_element(vertex_dcdf_colors.begin(), vertex_dcdf_colors.end());
@@ -672,8 +672,8 @@ bool QCDF2QuadMesh<Real>::load_feature(const std::string &featurefile)
             // #pragma omp parallel for
             //             for (ptrdiff_t i = 0; i < nverts; i++)
             //             {
-            //                 vertex_dcdf_colors[i] = (vertex_dcdf_colors[i] - min_dcdf_color) / (dcdf_range + (Real)1e-8);
-            //                 vertex_cdf_colors[i] = (vertex_cdf_colors[i] - min_cdf_color) / (cdf_range + (Real)1e-8);
+            //                 vertex_dcdf_colors[i] = (vertex_dcdf_colors[i] - min_dcdf_color) / (dcdf_range + static_cast<Real>(1e-8));
+            //                 vertex_cdf_colors[i] = (vertex_cdf_colors[i] - min_cdf_color) / (cdf_range + static_cast<Real>(1e-8));
             //             }
         }
 
@@ -683,14 +683,14 @@ bool QCDF2QuadMesh<Real>::load_feature(const std::string &featurefile)
         {
             for (int j = 0; j < 3; j++)
             {
-                inverse_rotation[i][j] = (Real)invT(i, j);
+                inverse_rotation[i][j] = static_cast<Real>(invT(i, j));
             }
-            normalization_center[i] = (Real)invT(i, 3);
+            normalization_center[i] = static_cast<Real>(invT(i, 3));
         }
     }
     catch (const std::exception &e)
     {
-        std::cerr << e.what() << std::endl;
+        std::cerr << e.what() << '\n';
         return false;
     }
     return true;
@@ -1109,7 +1109,7 @@ void QCDF2QuadMesh<Real>::process_unlabeled_faces()
     do
     {
         processed = false;
-        remain_unprocessed_faces.resize(0);
+        remain_unprocessed_faces.clear();
         for (auto i : unprocessed_faces)
         {
             if (face_cluster_ids[i] > 0)
@@ -1253,7 +1253,7 @@ int QCDF2QuadMesh<Real>::reindex_clusters()
         if (cid > 0)
             valid_cluster_tags[cid] = true;
     }
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)valid_cluster_tags.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(valid_cluster_tags.size()); i++)
     {
         if (valid_cluster_tags[i])
             reindex_map[i] = counter++;
@@ -1268,7 +1268,7 @@ int QCDF2QuadMesh<Real>::reindex_clusters()
     }
     std::vector<ptrdiff_t> cluster_center_face_ids_new(counter);
 #pragma omp parallel for
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)valid_cluster_tags.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(valid_cluster_tags.size()); i++)
     {
         if (valid_cluster_tags[i])
         {
@@ -1299,7 +1299,7 @@ void QCDF2QuadMesh<Real>::dcdf_build_quad_patches()
     // quad_vertices.assign(cluster_centers.begin(), cluster_centers.end());
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_vertices(); i++)
     {
-        poly.resize(0), visited_clusters.clear();
+        poly.clear(), visited_clusters.clear();
         visited_clusters.insert(-1);
         auto hv = m_pmesh->get_vertex(i);
         auto he = hv->edge;
@@ -1345,7 +1345,7 @@ void QCDF2QuadMesh<Real>::dcdf_build_quad_patches()
 
     std::vector<int> face_tags(patches.size(), false);
     std::unordered_map<MySortedTuple<ptrdiff_t, 2, true>, edgeinfo> edge_to_opposite_map;
-    for (ptrdiff_t fid = 0; fid < (ptrdiff_t)patches.size(); fid++)
+    for (ptrdiff_t fid = 0; fid < static_cast<ptrdiff_t>(patches.size()); fid++)
     {
         if (patches[fid].size() != 3)
             continue;
@@ -1396,13 +1396,13 @@ void QCDF2QuadMesh<Real>::dcdf_build_quad_patches()
     {
         if (item.second.fid[0] >= 0 && item.second.fid[1] >= 0)
         {
-            auto min_cluster_boundary = std::min(cluster_boundary_length[item.first[0]], cluster_boundary_length[item.first[1]]) + (Real)1.0e-10;
-            item.second.similarity_score = (float)shared_boundary_lengths[item.first];
+            auto min_cluster_boundary = std::min(cluster_boundary_length[item.first[0]], cluster_boundary_length[item.first[1]]) + static_cast<Real>(1.0e-10);
+            item.second.similarity_score = static_cast<float>(shared_boundary_lengths[item.first]);
             candidate_edges.push_back(item.second);
         }
     }
     std::sort(candidate_edges.begin(), candidate_edges.end());
-    quad_faces.resize(0), quad_faces.reserve(patches.size());
+    quad_faces.clear(), quad_faces.reserve(patches.size());
     for (auto &edge : candidate_edges)
     {
         if (face_tags[edge.fid[0]] || face_tags[edge.fid[1]])
@@ -1410,10 +1410,10 @@ void QCDF2QuadMesh<Real>::dcdf_build_quad_patches()
         face_tags[edge.fid[0]] = true;
         face_tags[edge.fid[1]] = true;
         std::vector<size_t> quad(4);
-        quad[0] = (size_t)edge.opposite_vid[0];
-        quad[1] = (size_t)edge.edge_vid[0];
-        quad[2] = (size_t)edge.opposite_vid[1];
-        quad[3] = (size_t)edge.edge_vid[1];
+        quad[0] = static_cast<size_t>(edge.opposite_vid[0]);
+        quad[1] = static_cast<size_t>(edge.edge_vid[0]);
+        quad[2] = static_cast<size_t>(edge.opposite_vid[1]);
+        quad[3] = static_cast<size_t>(edge.edge_vid[1]);
         quad_faces.push_back(quad);
     }
     for (size_t fid = 0; fid < patches.size(); fid++)
@@ -1458,7 +1458,7 @@ void QCDF2QuadMesh<Real>::dcdf_build_quad_patches()
     {
         quad_vertices = new_quad_vertices;
 #pragma omp parallel for
-        for (ptrdiff_t i = 0; i < (ptrdiff_t)quad_faces.size(); i++)
+        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(quad_faces.size()); i++)
         {
             for (size_t j = 0; j < quad_faces[i].size(); j++)
             {
@@ -1469,13 +1469,13 @@ void QCDF2QuadMesh<Real>::dcdf_build_quad_patches()
     if (non_quad_num > 0)
     {
         if (m_verbose)
-            std::cout << "Warning: " << non_quad_num << " non-quad polygons exist in the extracted quad mesh!" << std::endl;
+            std::cout << "Warning: " << non_quad_num << " non-quad polygons exist in the extracted quad mesh!" << '\n';
     }
     bool nonmanifold_issue = has_nonmanifold_issue(quad_vertices.size(), quad_faces);
     if (nonmanifold_issue)
     {
         if (m_verbose)
-            std::cout << "Warning: Non-manifold vertices/edges exist in the extracted quad mesh!" << std::endl;
+            std::cout << "Warning: Non-manifold vertices/edges exist in the extracted quad mesh!" << '\n';
     }
     else
     {
@@ -1485,9 +1485,9 @@ void QCDF2QuadMesh<Real>::dcdf_build_quad_patches()
             if (m_verbose)
             {
                 if (non_quad_num > 0)
-                    std::cout << "Warning: " << non_quad_num << " non-quad polygons still exist in the extracted quad mesh after fixing!" << std::endl;
+                    std::cout << "Warning: " << non_quad_num << " non-quad polygons still exist in the extracted quad mesh after fixing!" << '\n';
                 else
-                    std::cout << "All non-quad polygons are successfully fixed!" << std::endl;
+                    std::cout << "All non-quad polygons are successfully fixed!" << '\n';
             }
         }
     }
@@ -1564,7 +1564,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
             auto hv = m_pmesh->boundaryvertices[i][j];
             if (vertex_tags[hv->id] == 1)
             {
-                vertex_to_boundary_curve_id[hv->id] = (int)i;
+                vertex_to_boundary_curve_id[hv->id] = static_cast<int>(i);
             }
         }
     }
@@ -1589,8 +1589,8 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
         }
     }
     quad_vertices.reserve(vcount);
-    quad_vertices.resize(0);
-    quad_faces.resize(0);
+    quad_vertices.clear();
+    quad_faces.clear();
     m_pmesh->reset_edges_tag(false);
     std::vector<size_t> poly_vertex_ids;
     std::vector<ptrdiff_t> corresponding_mesh_vertex_ids;
@@ -1612,12 +1612,12 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
             else
             {
                 bool is_boundary = (edge->pair->face == 0);
-                poly_vertex_ids.resize(0);
+                poly_vertex_ids.clear();
                 do
                 {
                     if (vertex_new_ids[edge->pair->vert->id] >= 0)
                     {
-                        poly_vertex_ids.push_back((size_t)vertex_new_ids[edge->pair->vert->id]);
+                        poly_vertex_ids.push_back(static_cast<size_t>(vertex_new_ids[edge->pair->vert->id]));
                     }
                     edge->tag = true;
                     auto next_edge = edge->next;
@@ -1669,7 +1669,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
     {
         quad_vertices = new_quad_vertices;
 #pragma omp parallel for
-        for (ptrdiff_t i = 0; i < (ptrdiff_t)quad_faces.size(); i++)
+        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(quad_faces.size()); i++)
         {
             for (size_t j = 0; j < quad_faces[i].size(); j++)
             {
@@ -1698,7 +1698,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
     if (nonmanifold_issue)
     {
         if (m_verbose)
-            std::cout << "Warning: Non-manifold vertices/edges exist in the extracted quad mesh!" << std::endl;
+            std::cout << "Warning: Non-manifold vertices/edges exist in the extracted quad mesh!" << '\n';
         return;
     }
 
@@ -1719,7 +1719,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
 
     for (size_t v = 0; v < quad_vertices.size(); v++)
     {
-        auto vh = polymesh.add_vertex(OpenMesh::Vec3f((float)quad_vertices[v][0], (float)quad_vertices[v][1], (float)quad_vertices[v][2]));
+        auto vh = polymesh.add_vertex(OpenMesh::Vec3f(static_cast<float>(quad_vertices[v][0]), static_cast<float>(quad_vertices[v][1]), static_cast<float>(quad_vertices[v][2])));
         polymesh.property(v_feature_tag, vh) = quad_vertex_type[v];
         polymesh.property(v_id_tag, vh) = v;
     }
@@ -1728,10 +1728,10 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
     face_vertices.reserve(8);
     for (const auto &f : quad_faces)
     {
-        face_vertices.resize(0);
+        face_vertices.clear();
         for (const auto &vid : f)
         {
-            face_vertices.push_back(PolyMesh::VertexHandle((int)vid));
+            face_vertices.emplace_back(static_cast<int>(vid));
         }
         polymesh.add_face(face_vertices);
     }
@@ -1795,7 +1795,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
                 edge_type = 3;
             else
                 edge_type = 4;
-            vertex_type = std::abs((int)polymesh.valence(vh0) - 3) + std::abs((int)polymesh.valence(vh1) - 3);
+            vertex_type = std::abs(static_cast<int>(polymesh.valence(vh0)) - 3) + std::abs(static_cast<int>(polymesh.valence(vh1)) - 3);
         }
 
     public:
@@ -1854,8 +1854,8 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
         if (vh_from_feature_type >= 0 && vh_to_feature_type >= 0 && vh_from_feature_type != vh_to_feature_type)
             continue;
 
-        int valence_from = (int)polymesh.valence(vh_from);
-        int valence_to = (int)polymesh.valence(vh_to);
+        int valence_from = static_cast<int>(polymesh.valence(vh_from));
+        int valence_to = static_cast<int>(polymesh.valence(vh_to));
 
         if (valence_to < valence_from)
         {
@@ -1905,7 +1905,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
         }
         else
         {
-            if (edge_info.edge_type = 0 && max_valence > 4)
+            if (edge_info.edge_type == 0 && max_valence > 4)
                 continue;
             if (edge_info.edge_type > 0 && (min_valence != 3 || max_valence != 3))
                 continue;
@@ -1952,16 +1952,16 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
             auto fh = *vf_it;
             bool is_tri = polymesh.valence(fh) == 3;
             bool contains_vh_to = false;
-            before_face_points.resize(0), after_face_points.resize(0);
+            before_face_points.clear(), after_face_points.clear();
             for (auto fv_it = polymesh.cfv_iter(fh); fv_it.is_valid(); ++fv_it)
             {
                 auto p = polymesh.point(*fv_it);
-                auto pv = TinyVector<Real, 3>((Real)p[0], (Real)p[1], (Real)p[2]);
+                auto pv = TinyVector<Real, 3>(static_cast<Real>(p[0]), static_cast<Real>(p[1]), static_cast<Real>(p[2]));
                 before_face_points.emplace_back(pv);
                 if (*fv_it == vh_from)
                 {
                     auto p = polymesh.point(vh_to);
-                    after_face_points.push_back(TinyVector<Real, 3>((Real)p[0], (Real)p[1], (Real)p[2]));
+                    after_face_points.push_back(TinyVector<Real, 3>(static_cast<Real>(p[0]), static_cast<Real>(p[1]), static_cast<Real>(p[2])));
                 }
                 else
                 {
@@ -2028,7 +2028,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
     std::vector<ptrdiff_t> vertex_remap(quad_vertices.size(), -1);
     for (size_t i = 0; i < quad_vertices.size(); i++)
     {
-        ptrdiff_t current_id = (ptrdiff_t)i;
+        ptrdiff_t current_id = static_cast<ptrdiff_t>(i);
         while (vertex_collapse_map.find(current_id) != vertex_collapse_map.end())
         {
             current_id = vertex_collapse_map[current_id];
@@ -2052,7 +2052,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
     }
 
     //
-    new_quad_vertices.resize(0);
+    new_quad_vertices.clear();
     std::vector<ptrdiff_t> remained_original_vertex_ids;
     remained_original_vertex_ids.reserve(polymesh.n_vertices());
     std::vector<std::set<ptrdiff_t>> vertex_belonging_clusters;
@@ -2068,7 +2068,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
             id_remap[i] = new_quad_vertices.size() - 1;
         }
     }
-    quad_faces.resize(0);
+    quad_faces.clear();
     quad_faces.reserve(polymesh.n_faces());
     int non_quad_num = 0;
     for (const auto &f : polymesh.faces())
@@ -2091,7 +2091,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
     {
         if (m_verbose)
         {
-            std::cout << "Warning: " << non_quad_num << " non-quad polygons exist in the extracted quad mesh!" << std::endl;
+            std::cout << "Warning: " << non_quad_num << " non-quad polygons exist in the extracted quad mesh!" << '\n';
         }
 
         if (improve_mode)
@@ -2101,9 +2101,9 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
             if (m_verbose)
             {
                 if (non_quad_num > 0)
-                    std::cout << "Warning: " << non_quad_num << " non-quad polygons still exist in the extracted quad mesh after fixing!" << std::endl;
+                    std::cout << "Warning: " << non_quad_num << " non-quad polygons still exist in the extracted quad mesh after fixing!" << '\n';
                 else
-                    std::cout << "All non-quad polygons are successfully fixed!" << std::endl;
+                    std::cout << "All non-quad polygons are successfully fixed!" << '\n';
             }
         }
     }
@@ -2113,9 +2113,9 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
         return;
 
     ///////////////////////////////////////////////////////////////////////
-    std::vector<ig::AABB_Segment_Tree<Real> *> feature_arc_trees(feature_edge_loops.size(), 0);
+    std::vector<ig::AABB_Segment_Tree<Real> *> feature_arc_trees(feature_edge_loops.size(), nullptr);
 #pragma omp parallel for schedule(dynamic)
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)feature_edge_loops.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(feature_edge_loops.size()); i++)
     {
         std::vector<TinyVector<Real, 3>> arc_points;
         for (size_t j = 0; j < feature_edge_loops[i].size() - 1; j++)
@@ -2127,8 +2127,8 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
     }
     auto cluster_size = *std::max_element(face_cluster_ids.begin(), face_cluster_ids.end()) + 1;
     std::vector<std::vector<TinyVector<Real, 3>>> cluster_faces(cluster_size);
-    std::vector<ig::AABB_Tree<Real> *> cluster_trees(cluster_size, 0);
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)m_pmesh->get_num_of_faces(); i++)
+    std::vector<ig::AABB_Tree<Real> *> cluster_trees(cluster_size, nullptr);
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(m_pmesh->get_num_of_faces()); i++)
     {
         auto cid = face_cluster_ids[i];
         auto he = m_pmesh->get_face(i)->edge;
@@ -2137,7 +2137,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
         cluster_faces[cid].emplace_back(he->next->vert->pos);
     }
 #pragma omp parallel for schedule(dynamic)
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)cluster_faces.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(cluster_faces.size()); i++)
     {
         if (!cluster_faces[i].empty())
             cluster_trees[i] = new ig::AABB_Tree<Real>(cluster_faces[i]);
@@ -2147,13 +2147,13 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
     {
         for (size_t j = 0; j < feature_edge_loops[i].size(); j++)
         {
-            tri_vertex_to_feature_arc_ids[feature_edge_loops[i][j]->id].insert((int)i);
+            tri_vertex_to_feature_arc_ids[feature_edge_loops[i][j]->id].insert(static_cast<int>(i));
         }
     }
     std::unordered_set<ptrdiff_t> feature_vertices;
     std::unordered_map<ptrdiff_t, std::set<int>> vertex_to_feature_arc_ids;
     // std::vector<std::set<ptrdiff_t>> vertex_belonging_clusters(quad_vertices.size());
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)remained_original_vertex_ids.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(remained_original_vertex_ids.size()); i++)
     {
         auto vid = remained_original_vertex_ids[i];
         if (vertex_feature_tag[vid])
@@ -2176,7 +2176,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
 
     auto mesh = create_mesh(quad_vertices, quad_faces, true);
 
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)mesh->get_num_of_vertices(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(mesh->get_num_of_vertices()); i++)
     {
         auto hv = mesh->get_vertex(i);
         bool singular = mesh->is_on_boundary(hv) ? hv->degree != 3 : hv->degree != 4;
@@ -2194,7 +2194,7 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
         delete submesh;
         quad_vertices.resize(mesh->get_num_of_vertices());
 #pragma omp parallel for
-        for (ptrdiff_t i = 0; i < (ptrdiff_t)mesh->get_num_of_vertices(); i++)
+        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(mesh->get_num_of_vertices()); i++)
         {
             quad_vertices[i] = mesh->get_vertex(i)->pos;
         }
@@ -2204,10 +2204,10 @@ void QCDF2QuadMesh<Real>::cdf_build_quad_patches()
 
     quad_faces.resize(mesh->get_num_of_faces());
 #pragma omp parallel for
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)mesh->get_num_of_faces(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(mesh->get_num_of_faces()); i++)
     {
         auto he = mesh->get_face(i)->edge;
-        quad_faces[i].resize(0);
+        quad_faces[i].clear();
         do
         {
             quad_faces[i].push_back(he->pair->vert->id);
@@ -2241,7 +2241,7 @@ template <typename Real>
 void QCDF2QuadMesh<Real>::merge_clusters(const FaceClusterType type)
 {
     // return;
-    // const Real color_bound = (Real)0.5;
+    // const Real color_bound = static_cast<Real>(0.5);
     // std::unordered_set<MySortedTuple<ptrdiff_t, 2, true>> cluster_edges;
     const std::vector<Real> &face_colors = (type == FaceClusterType::FC_DCDF) ? face_dcdf_colors : face_cdf_colors;
     // for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); i += 2)
@@ -2588,7 +2588,7 @@ int QCDF2QuadMesh<Real>::fix_nonquad_faces(const int non_quad_num)
         }
     } while (processed);
     int remained_nonquad = 0;
-    quad_faces.resize(0);
+    quad_faces.clear();
     for (size_t i = 0; i < new_quad_faces.size(); i++)
     {
         if (valid_faces[i])
@@ -2630,8 +2630,8 @@ void QCDF2QuadMesh<Real>::quad_extraction(const FaceClusterType method)
         int num_clusters = cluster_via_polarization(type);
         if (m_debug_mode)
         {
-            std::cout << (type == FaceClusterType::FC_CDF ? "CDF" : "DCDF") << " processing" << std::endl;
-            std::cout << "Step 1 (color polarization) is done!" << std::endl;
+            std::cout << (type == FaceClusterType::FC_CDF ? "CDF" : "DCDF") << " processing" << '\n';
+            std::cout << "Step 1 (color polarization) is done!" << '\n';
             SavePLYmesh_with_float_storage(m_pmesh, path_concatenate(debug_dir, type_str + "clustered_face.ply"), &face_cluster_ids, false);
 
             const std::vector<Real> &face_colors = (type == FaceClusterType::FC_CDF) ? face_cdf_colors : face_dcdf_colors;
@@ -2648,7 +2648,7 @@ void QCDF2QuadMesh<Real>::quad_extraction(const FaceClusterType method)
         process_uncluster_faces(type, num_clusters);
         if (m_debug_mode)
         {
-            std::cout << "Step 2 (process unclustered faces) is done!" << std::endl;
+            std::cout << "Step 2 (process unclustered faces) is done!" << '\n';
             SavePLYmesh_with_float_storage(m_pmesh, path_concatenate(debug_dir, type_str + "clustered_face2.ply"), &face_cluster_ids, false);
         }
 
@@ -2664,7 +2664,7 @@ void QCDF2QuadMesh<Real>::quad_extraction(const FaceClusterType method)
         {
             if (m_verbose)
             {
-                std::cout << "Warning: " << unclustered_face_count << " unclustered faces remain after Step 2!" << std::endl;
+                std::cout << "Warning: " << unclustered_face_count << " unclustered faces remain after Step 2!" << '\n';
             }
         }
 
@@ -2686,12 +2686,12 @@ void QCDF2QuadMesh<Real>::quad_extraction(const FaceClusterType method)
         if (m_debug_mode)
         {
             // if (handled)
-            //     std::cout << "Step 3 (handle incorrect clusters) is done!" << std::endl;
+            //     std::cout << "Step 3 (handle incorrect clusters) is done!" << '\n';
             // else
-            //     std::cout << "Step 3 (handle incorrect clusters): no incorrect cluster found!" << std::endl;
+            //     std::cout << "Step 3 (handle incorrect clusters): no incorrect cluster found!" << '\n';
             SavePLYmesh_with_float_storage(m_pmesh, path_concatenate(debug_dir, type_str + "final_clustered_face.ply"), &face_cluster_ids, false);
 
-            SaveChartEdge_as_ply(m_pmesh, path_concatenate(debug_dir, type_str + "final_clustered_edge.ply"), face_cluster_ids, 0.001f * (float)global_scale);
+            SaveChartEdge_as_ply(m_pmesh, path_concatenate(debug_dir, type_str + "final_clustered_edge.ply"), face_cluster_ids, 0.001f * static_cast<float>(global_scale));
         }
 
         if (method == FaceClusterType::FC_CDF_DCDF)
@@ -2707,7 +2707,7 @@ void QCDF2QuadMesh<Real>::quad_extraction(const FaceClusterType method)
         {
             SavePLYmesh_with_float_storage(m_pmesh, path_concatenate(debug_dir, "cdf_dcdf_final_clustered_face.ply"), &face_cluster_ids, false);
 
-            SaveChartEdge_as_ply(m_pmesh, path_concatenate(debug_dir, "cdf_dcdf_final_clustered_edge.ply"), face_cluster_ids, 0.001f * (float)global_scale);
+            SaveChartEdge_as_ply(m_pmesh, path_concatenate(debug_dir, "cdf_dcdf_final_clustered_edge.ply"), face_cluster_ids, 0.001f * static_cast<float>(global_scale));
         }
     }
 
@@ -2840,7 +2840,7 @@ void QCDF2QuadMesh<Real>::update_face_cluster_ids(const std::vector<std::vector<
     // SavePLYMesh_with_color(path_concatenate(debug_dir, "cdf_dcdf_type_vertices.ply"), tmp_points, std::vector<std::vector<size_t>>(), &vertex_cluster_ids, nullptr);
 
     // eliminate small clusters: as CDF patches are known.
-    std::vector<Real> cluster_areas(cluster_id, (Real)0);
+    std::vector<Real> cluster_areas(cluster_id, static_cast<Real>(0));
     std::vector<ptrdiff_t> orginal_cluster_ids(cluster_id, 0);
     for (int i = 0; i < cluster_id; i++)
     {
@@ -2855,7 +2855,7 @@ void QCDF2QuadMesh<Real>::update_face_cluster_ids(const std::vector<std::vector<
     if (4 * cdf_patch_num > cluster_id)
     {
         if (m_verbose)
-            std::cerr << "Warning: the number of clusters is less than or equal to 4 times of CDF patches!" << std::endl;
+            std::cerr << "Warning: the number of clusters is less than or equal to 4 times of CDF patches!" << '\n';
         return;
     }
     else if (4 * cdf_patch_num == cluster_id)
@@ -2903,7 +2903,7 @@ void QCDF2QuadMesh<Real>::update_face_cluster_ids(const std::vector<std::vector<
         if (map_id >= 0)
             cluster_reindex_map[orginal_cluster_ids[i]] = map_id;
         else if (m_verbose)
-            std::cout << "Warning: cannot find a valid cluster to map for cluster " << orginal_cluster_ids[i] << std::endl;
+            std::cout << "Warning: cannot find a valid cluster to map for cluster " << orginal_cluster_ids[i] << '\n';
     }
 
 #pragma omp parallel for
@@ -2929,7 +2929,7 @@ void QCDF2QuadMesh<Real>::quad_smoothing(
     std::vector<std::vector<ptrdiff_t>> vertex_one_rings(mesh->get_num_of_vertices());
 
 #pragma omp parallel for schedule(dynamic)
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)mesh->get_num_of_vertices(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(mesh->get_num_of_vertices()); i++)
     {
         auto hv = mesh->get_vertex(i);
         if (feature_vertices.find(i) != feature_vertices.end())
@@ -2978,7 +2978,7 @@ void QCDF2QuadMesh<Real>::quad_smoothing(
     }
     if (smooth_num > 0)
     {
-        // std::cout << "Start quad mesh smoothing with " << smooth_num << " iterations." << std::endl;
+        // std::cout << "Start quad mesh smoothing with " << smooth_num << " iterations." << '\n';
         for (unsigned int it = 0; it < smooth_num; it++)
         {
             quad_projection(mesh, vertex_belonging_clusters, vertex_to_feature_arc_ids, feature_vertices, cluster_trees, feature_arc_trees, new_positions, nonsmooth_tags);
@@ -3005,7 +3005,7 @@ void QCDF2QuadMesh<Real>::quad_smoothing(
                 {
                     for (auto j = 0; j < one_ring.size() / 2; j++)
                     {
-                        weight = 1 / ((quad_vertices[one_ring[j]] - quad_vertices[one_ring[(j + one_ring.size() / 2) % one_ring.size()]]).SquaredLength() + (Real)1.0e-12);
+                        weight = 1 / ((quad_vertices[one_ring[j]] - quad_vertices[one_ring[(j + one_ring.size() / 2) % one_ring.size()]]).SquaredLength() + static_cast<Real>(1.0e-12));
                         center += (weight / 2) * (quad_vertices[one_ring[j]] + quad_vertices[one_ring[(j + one_ring.size() / 2) % one_ring.size()]]);
                         total_weight += weight;
                     }
@@ -3080,7 +3080,7 @@ void QCDF2QuadMesh<Real>::quad_projection(
         else
         {
             if (m_verbose)
-                std::cout << "Warning: vertex " << i << " does not belong to any cluster!" << std::endl;
+                std::cout << "Warning: vertex " << i << " does not belong to any cluster!" << '\n';
         }
     }
 }

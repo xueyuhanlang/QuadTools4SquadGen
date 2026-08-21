@@ -1,5 +1,4 @@
-#ifndef MESHSUBDIVISION_H
-#define MESHSUBDIVISION_H
+#pragma once
 
 #include "Mesh3D.h"
 #include <set>
@@ -22,14 +21,12 @@ namespace MeshLib
 
 	public:
 		//! constructor
-		MeshSubdivision(Mesh3D<Real> *_mesh)
+		explicit MeshSubdivision(Mesh3D<Real> *_mesh) noexcept
 			: m_pmesh(_mesh)
 		{
 		}
 		//! destructor
-		~MeshSubdivision()
-		{
-		}
+		~MeshSubdivision() = default;
 		// subdivision schemes
 
 		//! Catmull Clark
@@ -50,7 +47,5 @@ namespace MeshLib
 	};
 } // end of namespace
 
-// typedef MeshLib::MeshSubdivision<float> MeshSubdivision3f;
-typedef MeshLib::MeshSubdivision<double> MeshSubdivision3d;
-
-#endif // MESHSUBDIVISION_H
+// using MeshSubdivision3f = MeshLib::MeshSubdivision<float>;
+using MeshSubdivision3d = MeshLib::MeshSubdivision<double>;

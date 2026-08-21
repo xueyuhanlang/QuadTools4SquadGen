@@ -1,254 +1,199 @@
 #pragma once
 
+#include <array>
 #include <cmath>
 #include <algorithm>
+#include <limits>
 
 // https://github.com/brainexcerpts/3x3_polar_decomposition
-// -----------------------------------------------------------------------------
+// Computes eigenvalues (d) and eigenvectors (columns of V) of a real symmetric 3x3 matrix A.
+// Eigenvalues are returned in ascending order.
 
 template <typename Real>
 class Eigen3x3
 {
 public:
-    Eigen3x3(const Real A[3][3], Real V[3][3], Real d[3])
+    static constexpr int N = 3;
+    using Matrix = std::array<std::array<Real, N>, N>;
+    using Vector = std::array<Real, N>;
+
+    // C-style array interface for backward compatibility.
+    // On return, d_out[i] are eigenvalues (ascending), columns of V_out are eigenvectors.
+    Eigen3x3(const Real A[N][N], Real V_out[N][N], Real d_out[N]) noexcept
     {
-        Real e[3];
-        for (int i = 0; i < 3; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
+        Matrix V{};
+        for (int i = 0; i < N; ++i)
+            for (int j = 0; j < N; ++j)
                 V[i][j] = A[i][j];
-            }
+
+        Vector d{}, e{};
+        tred2(V, d, e);
+        tql2(V, d, e);
+
+        for (int i = 0; i < N; ++i) {
+            d_out[i] = d[i];
+            for (int j = 0; j < N; ++j)
+                V_out[i][j] = V[i][j];
         }
+    }
+
+    // Modern std::array interface.
+    Eigen3x3(const Matrix& A, Matrix& V, Vector& d) noexcept
+    {
+        V = A;
+        Vector e{};
         tred2(V, d, e);
         tql2(V, d, e);
     }
 
-protected:
-    Real hypot2(Real x, Real y)
-    {
-        return sqrt(x * x + y * y);
-    }
+private:
     // Symmetric Householder reduction to tridiagonal form.
-    void tred2(Real V[3][3], Real d[3], Real e[3])
+    // Derived from Algol procedures tred2 by Bowdler, Martin, Reinsch, and Wilkinson,
+    // Handbook for Auto. Comp., Vol.ii-Linear Algebra (EISPACK).
+    static void tred2(Matrix& V, Vector& d, Vector& e) noexcept
     {
+        for (int j = 0; j < N; ++j)
+            d[j] = V[N - 1][j];
 
-        //  This is derived from the Algol procedures tred2 by
-        //  Bowdler, Martin, Reinsch, and Wilkinson, Handbook for
-        //  Auto. Comp., Vol.ii-Linear Algebra, and the corresponding
-        //  Fortran subroutine in EISPACK.
+        for (int i = N - 1; i > 0; --i) {
+            Real scale = Real(0);
+            Real h = Real(0);
+            for (int k = 0; k < i; ++k)
+                scale += std::fabs(d[k]);
 
-        for (int j = 0; j < 3; j++)
-        {
-            d[j] = V[3 - 1][j];
-        }
-
-        // Householder reduction to tridiagonal form.
-
-        for (int i = 3 - 1; i > 0; i--)
-        {
-
-            // Scale to avoid under/overflow.
-
-            Real scale = 0.0;
-            Real h = 0.0;
-            for (int k = 0; k < i; k++)
-            {
-                scale = scale + fabs(d[k]);
-            }
-            if (scale == 0.0)
-            {
+            if (scale == Real(0)) {
                 e[i] = d[i - 1];
-                for (int j = 0; j < i; j++)
-                {
-                    d[j] = V[i - 1][j];
-                    V[i][j] = 0.0;
-                    V[j][i] = 0.0;
+                for (int j = 0; j < i; ++j) {
+                    d[j]    = V[i - 1][j];
+                    V[i][j] = Real(0);
+                    V[j][i] = Real(0);
                 }
-            }
-            else
-            {
-
-                // Generate Householder vector.
-
-                for (int k = 0; k < i; k++)
-                {
+            } else {
+                for (int k = 0; k < i; ++k) {
                     d[k] /= scale;
                     h += d[k] * d[k];
                 }
                 Real f = d[i - 1];
-                Real g = sqrt(h);
-                if (f > 0)
-                {
+                Real g = std::sqrt(h);
+                if (f > Real(0))
                     g = -g;
-                }
-                e[i] = scale * g;
-                h = h - f * g;
+                e[i]     = scale * g;
+                h       -= f * g;
                 d[i - 1] = f - g;
-                for (int j = 0; j < i; j++)
-                {
-                    e[j] = 0.0;
-                }
+                for (int j = 0; j < i; ++j)
+                    e[j] = Real(0);
 
                 // Apply similarity transformation to remaining columns.
-
-                for (int j = 0; j < i; j++)
-                {
-                    f = d[j];
-                    V[j][i] = f;
-                    g = e[j] + V[j][j] * f;
-                    for (int k = j + 1; k <= i - 1; k++)
-                    {
-                        g += V[k][j] * d[k];
+                for (int j = 0; j < i; ++j) {
+                    f        = d[j];
+                    V[j][i]  = f;
+                    g        = e[j] + V[j][j] * f;
+                    for (int k = j + 1; k <= i - 1; ++k) {
+                        g    += V[k][j] * d[k];
                         e[k] += V[k][j] * f;
                     }
                     e[j] = g;
                 }
-                f = 0.0;
-                for (int j = 0; j < i; j++)
-                {
+                f = Real(0);
+                for (int j = 0; j < i; ++j) {
                     e[j] /= h;
-                    f += e[j] * d[j];
+                    f    += e[j] * d[j];
                 }
-                Real hh = f / (h + h);
-                for (int j = 0; j < i; j++)
-                {
+                const Real hh = f / (h + h);
+                for (int j = 0; j < i; ++j)
                     e[j] -= hh * d[j];
-                }
-                for (int j = 0; j < i; j++)
-                {
+                for (int j = 0; j < i; ++j) {
                     f = d[j];
                     g = e[j];
-                    for (int k = j; k <= i - 1; k++)
-                    {
-                        V[k][j] -= (f * e[k] + g * d[k]);
-                    }
-                    d[j] = V[i - 1][j];
-                    V[i][j] = 0.0;
+                    for (int k = j; k <= i - 1; ++k)
+                        V[k][j] -= f * e[k] + g * d[k];
+                    d[j]    = V[i - 1][j];
+                    V[i][j] = Real(0);
                 }
             }
             d[i] = h;
         }
 
         // Accumulate transformations.
-
-        for (int i = 0; i < 3 - 1; i++)
-        {
-            V[3 - 1][i] = V[i][i];
-            V[i][i] = 1.0;
-            Real h = d[i + 1];
-            if (h != 0.0)
-            {
-                for (int k = 0; k <= i; k++)
-                {
+        for (int i = 0; i < N - 1; ++i) {
+            V[N - 1][i] = V[i][i];
+            V[i][i]     = Real(1);
+            const Real h = d[i + 1];
+            if (h != Real(0)) {
+                for (int k = 0; k <= i; ++k)
                     d[k] = V[k][i + 1] / h;
-                }
-                for (int j = 0; j <= i; j++)
-                {
-                    Real g = 0.0;
-                    for (int k = 0; k <= i; k++)
-                    {
+                for (int j = 0; j <= i; ++j) {
+                    Real g = Real(0);
+                    for (int k = 0; k <= i; ++k)
                         g += V[k][i + 1] * V[k][j];
-                    }
-                    for (int k = 0; k <= i; k++)
-                    {
+                    for (int k = 0; k <= i; ++k)
                         V[k][j] -= g * d[k];
-                    }
                 }
             }
-            for (int k = 0; k <= i; k++)
-            {
-                V[k][i + 1] = 0.0;
-            }
+            for (int k = 0; k <= i; ++k)
+                V[k][i + 1] = Real(0);
         }
-        for (int j = 0; j < 3; j++)
-        {
-            d[j] = V[3 - 1][j];
-            V[3 - 1][j] = 0.0;
+        for (int j = 0; j < N; ++j) {
+            d[j]            = V[N - 1][j];
+            V[N - 1][j]     = Real(0);
         }
-        V[3 - 1][3 - 1] = 1.0;
-        e[0] = 0.0;
+        V[N - 1][N - 1] = Real(1);
+        e[0]            = Real(0);
     }
+
     // Symmetric tridiagonal QL algorithm.
-    void tql2(Real V[3][3], Real d[3], Real e[3])
+    // Derived from Algol procedures tql2 by Bowdler, Martin, Reinsch, and Wilkinson,
+    // Handbook for Auto. Comp., Vol.ii-Linear Algebra (EISPACK).
+    static void tql2(Matrix& V, Vector& d, Vector& e) noexcept
     {
-
-        //  This is derived from the Algol procedures tql2, by
-        //  Bowdler, Martin, Reinsch, and Wilkinson, Handbook for
-        //  Auto. Comp., Vol.ii-Linear Algebra, and the corresponding
-        //  Fortran subroutine in EISPACK.
-
-        for (int i = 1; i < 3; i++)
-        {
+        for (int i = 1; i < N; ++i)
             e[i - 1] = e[i];
-        }
-        e[3 - 1] = 0.0;
+        e[N - 1] = Real(0);
 
-        Real f = 0.0f;
-        Real tst1 = 0.0f;
-        Real eps = (Real)pow(2.0, -52.0);
-        for (int l = 0; l < 3; l++)
-        {
+        Real f    = Real(0);
+        Real tst1 = Real(0);
+        const Real eps = std::numeric_limits<Real>::epsilon();
 
-            // Find small subdiagonal element
-
-            tst1 = std::max(tst1, fabs(d[l]) + fabs(e[l]));
+        for (int l = 0; l < N; ++l) {
+            tst1 = std::max(tst1, std::fabs(d[l]) + std::fabs(e[l]));
             int m = l;
-            while (m < 3)
-            {
-                if (fabs(e[m]) <= eps * tst1)
-                {
+            while (m < N) {
+                if (std::fabs(e[m]) <= eps * tst1)
                     break;
-                }
-                m++;
+                ++m;
             }
 
-            // If m == l, d[l] is an eigenvalue,
-            // otherwise, iterate.
-
-            if (m > l)
-            {
-                int iter = 0;
-                do
-                {
-                    iter = iter + 1; // (Could check iteration count here.)
-
-                    // Compute implicit shift
-
+            if (m > l) {
+                do {
                     Real g = d[l];
-                    Real p = (d[l + 1] - g) / (2 * e[l]);
-                    Real r = hypot2(p, 1);
-                    if (p < 0)
-                    {
+                    Real p = (d[l + 1] - g) / (Real(2) * e[l]);
+                    Real r = std::hypot(p, Real(1));
+                    if (p < Real(0))
                         r = -r;
-                    }
-                    d[l] = e[l] / (p + r);
-                    d[l + 1] = e[l] * (p + r);
-                    Real dl1 = d[l + 1];
-                    Real h = g - d[l];
-                    for (int i = l + 2; i < 3; i++)
-                    {
+                    d[l]       = e[l] / (p + r);
+                    d[l + 1]   = e[l] * (p + r);
+                    const Real dl1 = d[l + 1];
+                    Real h     = g - d[l];
+                    for (int i = l + 2; i < N; ++i)
                         d[i] -= h;
-                    }
-                    f = f + h;
+                    f += h;
 
                     // Implicit QL transformation.
+                    p              = d[m];
+                    Real c         = Real(1);
+                    Real c2        = Real(1);
+                    Real c3        = Real(1);
+                    const Real el1 = e[l + 1];
+                    Real s         = Real(0);
+                    Real s2        = Real(0);
 
-                    p = d[m];
-                    Real c = 1.0;
-                    Real c2 = c;
-                    Real c3 = c;
-                    Real el1 = e[l + 1];
-                    Real s = 0.0;
-                    Real s2 = 0.0;
-                    for (int i = m - 1; i >= l; i--)
-                    {
+                    for (int i = m - 1; i >= l; --i) {
                         c3 = c2;
                         c2 = c;
                         s2 = s;
-                        g = c * e[i];
-                        h = c * p;
-                        r = hypot2(p, e[i]);
+                        g  = c * e[i];
+                        h  = c * p;
+                        r  = std::hypot(p, e[i]);
                         e[i + 1] = s * r;
                         s = e[i] / r;
                         c = p / r;
@@ -256,50 +201,36 @@ protected:
                         d[i + 1] = h + s * (c * g + s * d[i]);
 
                         // Accumulate transformation.
-
-                        for (int k = 0; k < 3; k++)
-                        {
-                            h = V[k][i + 1];
-                            V[k][i + 1] = s * V[k][i] + c * h;
-                            V[k][i] = c * V[k][i] - s * h;
+                        for (int k = 0; k < N; ++k) {
+                            h            = V[k][i + 1];
+                            V[k][i + 1]  = s * V[k][i] + c * h;
+                            V[k][i]      = c * V[k][i] - s * h;
                         }
                     }
-                    p = -s * s2 * c3 * el1 * e[l] / dl1;
+                    p    = -s * s2 * c3 * el1 * e[l] / dl1;
                     e[l] = s * p;
                     d[l] = c * p;
-
-                    // Check for convergence.
-
-                } while (fabs(e[l]) > eps * tst1);
+                } while (std::fabs(e[l]) > eps * tst1);
             }
-            d[l] = d[l] + f;
-            e[l] = 0.0;
+            d[l] += f;
+            e[l]  = Real(0);
         }
 
-        // Sort eigenvalues and corresponding vectors.
-
-        for (int i = 0; i < 3 - 1; i++)
-        {
-            int k = i;
+        // Sort eigenvalues and corresponding vectors in ascending order.
+        for (int i = 0; i < N - 1; ++i) {
+            int  k = i;
             Real p = d[i];
-            for (int j = i + 1; j < 3; j++)
-            {
-                if (d[j] < p)
-                {
+            for (int j = i + 1; j < N; ++j) {
+                if (d[j] < p) {
                     k = j;
                     p = d[j];
                 }
             }
-            if (k != i)
-            {
+            if (k != i) {
                 d[k] = d[i];
                 d[i] = p;
-                for (int j = 0; j < 3; j++)
-                {
-                    p = V[j][i];
-                    V[j][i] = V[j][k];
-                    V[j][k] = p;
-                }
+                for (int j = 0; j < N; ++j)
+                    std::swap(V[j][i], V[j][k]);
             }
         }
     }

@@ -1,5 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #include "MeshLoader.h"
 
 #include <fstream>
@@ -11,6 +9,7 @@
 #define TINYGLTF_NO_EXTERNAL_IMAGE
 #define TINYGLTF_NOEXCEPTION
 #define JSON_NOEXCEPTION
+#define _CRT_SECURE_NO_WARNINGS
 #include "tiny_gltf.h"
 #include "happly.h"
 #include "ufbx.h"
@@ -20,8 +19,8 @@ template <typename Real>
 void mesh_load_interface(const std::string &filename, std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vector<size_t>> &face_indices, bool nonmanifold_input)
 {
     // get the file extension
-    size_t lastindex = filename.find_last_of(".");
-    std::string ext = filename.substr(lastindex + 1);
+    const auto lastindex = filename.find_last_of('.');
+    std::string ext = lastindex == std::string::npos ? std::string{} : filename.substr(lastindex + 1);
     std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c)
                    { return std::tolower(c); }); //
     if (ext == "ply")
@@ -74,7 +73,8 @@ void mesh_load_interface(const std::string &filename, std::vector<TinyVector<Rea
 template <typename Real>
 void mesh_load_stl(const std::string &filename, std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vector<size_t>> &face_indices)
 {
-    vertices.resize(0), face_indices.resize(0);
+    vertices.clear();
+    face_indices.clear();
 
     try
     {
@@ -90,26 +90,26 @@ void mesh_load_stl(const std::string &filename, std::vector<TinyVector<Real, 3>>
             uint16_t attr;
             float v[3];
             TinyVector<double, 3> V;
-            auto __res = fread(header, sizeof(uint8_t), 80, fp);
-            __res = fread(&nf, sizeof(uint32_t), 1, fp);
-            vertices.resize(nf * 3);
+            (void)fread(header, sizeof(uint8_t), 80, fp);
+            (void)fread(&nf, sizeof(uint32_t), 1, fp);
+            vertices.reserve(static_cast<size_t>(nf) * 3);
             for (uint32_t id = 0; id < nf; id++)
             {
-                __res = fread(v, sizeof(float), 3, fp); // normal
+                (void)fread(v, sizeof(float), 3, fp); // normal
                 for (int i = 0; i < 3; i++)
                 {
-                    __res = fread(v, sizeof(float), 3, fp);
-                    V[0] = (double)v[0];
-                    V[1] = (double)v[1];
-                    V[2] = (double)v[2];
+                    (void)fread(v, sizeof(float), 3, fp);
+                    V[0] = static_cast<double>(v[0]);
+                    V[1] = static_cast<double>(v[1]);
+                    V[2] = static_cast<double>(v[2]);
                     vertices.emplace_back(TinyVector<Real, 3>(V[0], V[1], V[2]));
                 }
-                __res = fread(&attr, sizeof(uint16_t), 1, fp);
+                (void)fread(&attr, sizeof(uint16_t), 1, fp);
             }
             fclose(fp);
             face_indices.resize(vertices.size() / 3);
             for (size_t i = 0; i < vertices.size(); i += 3)
-                face_indices[i / 3] = {(uint32_t)i, (uint32_t)(i + 1), (uint32_t)(i + 2)};
+                face_indices[i / 3] = {static_cast<size_t>(i), static_cast<size_t>(i + 1), static_cast<size_t>(i + 2)};
         }
         else
         {
@@ -147,13 +147,14 @@ void mesh_load_stl(const std::string &filename, std::vector<TinyVector<Real, 3>>
             }
             face_indices.resize(vertices.size() / 3);
             for (size_t i = 0; i < vertices.size(); i += 3)
-                face_indices[i / 3] = {(uint32_t)i, (uint32_t)(i + 1), (uint32_t)(i + 2)};
+                face_indices[i / 3] = {static_cast<size_t>(i), static_cast<size_t>(i + 1), static_cast<size_t>(i + 2)};
         }
         fin.close();
     }
     catch (const std::exception &e)
     {
-        vertices.resize(0), face_indices.resize(0);
+        vertices.clear();
+        face_indices.clear();
         std::cerr << e.what() << '\n';
     }
 }
@@ -167,14 +168,15 @@ void mesh_load_ply(const std::string &filename, std::vector<TinyVector<Real, 3>>
         std::vector<std::array<double, 3>> vPos = plyIn.getVertexPositions();
         face_indices = plyIn.getFaceIndices<size_t>();
         vertices.resize(vPos.size());
-        for (ptrdiff_t i = 0; i < (ptrdiff_t)vPos.size(); i++)
+        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(vPos.size()); ++i)
         {
-            vertices[i][0] = (Real)vPos[i][0], vertices[i][1] = (Real)vPos[i][1], vertices[i][2] = (Real)vPos[i][2];
+            vertices[i][0] = static_cast<Real>(vPos[i][0]), vertices[i][1] = static_cast<Real>(vPos[i][1]), vertices[i][2] = static_cast<Real>(vPos[i][2]);
         }
     }
     catch (const std::exception &e)
     {
-        vertices.resize(0), face_indices.resize(0);
+        vertices.clear();
+        face_indices.clear();
         std::cerr << e.what() << '\n';
     }
 }
@@ -625,8 +627,8 @@ void mesh_load_glb(const std::string &filename, std::vector<TinyVector<Real, 3>>
         std::vector<std::vector<Mat4>> global_scene_node_transform_matrices;
     };
 
-    vertices.resize(0);
-    face_indices.resize(0);
+    vertices.clear();
+    face_indices.clear();
 
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
@@ -645,14 +647,14 @@ void mesh_load_glb(const std::string &filename, std::vector<TinyVector<Real, 3>>
         return;
 
     if (!warn.empty())
-        std::cout << "Warn: " << warn << std::endl;
+        std::cout << "Warn: " << warn << '\n';
 
     if (!err.empty())
-        std::cout << "Err: " << err << std::endl;
+        std::cout << "Err: " << err << '\n';
 
     if (!ret)
     {
-        std::cout << "Failed to parse glTF!" << std::endl;
+        std::cout << "Failed to parse glTF!" << '\n';
         return;
     }
 
@@ -682,7 +684,8 @@ void mesh_load_glb(const std::string &filename, std::vector<TinyVector<Real, 3>>
         }
     }
 
-    vertices.reserve(total_num_vertices), face_indices.reserve(total_num_faces);
+    vertices.reserve(total_num_vertices);
+    face_indices.reserve(total_num_faces);
 
     GLTFTransform gltfTransform(model);
     const auto &global_transforms = gltfTransform.GetGlobalTransformations();
@@ -735,7 +738,7 @@ void mesh_load_glb(const std::string &filename, std::vector<TinyVector<Real, 3>>
                     double ty = nodeWorld.m[1] * x + nodeWorld.m[5] * y + nodeWorld.m[9] * z + nodeWorld.m[13];
                     double tz = nodeWorld.m[2] * x + nodeWorld.m[6] * y + nodeWorld.m[10] * z + nodeWorld.m[14];
 
-                    vertices.emplace_back(TinyVector<Real, 3>((Real)tx, (Real)ty, (Real)tz));
+                    vertices.emplace_back(TinyVector<Real, 3>(static_cast<Real>(tx), static_cast<Real>(ty), static_cast<Real>(tz)));
                 }
 
                 // Read and store face indices
@@ -743,7 +746,7 @@ void mesh_load_glb(const std::string &filename, std::vector<TinyVector<Real, 3>>
                 auto add_faces = [&](auto indices)
                 {
                     for (size_t i = 0; i < 3 * numFacets; i += 3)
-                        face_indices.push_back({vertexStartIndex + indices[i], vertexStartIndex + indices[i + 1], vertexStartIndex + indices[i + 2]});
+                        face_indices.emplace_back(std::vector<size_t>{vertexStartIndex + indices[i], vertexStartIndex + indices[i + 1], vertexStartIndex + indices[i + 2]});
                 };
                 if (componentType == TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT)
                     add_faces(reinterpret_cast<const uint16_t *>(&indexBuffer.data[indexBufferView.byteOffset + indexAccessor.byteOffset]));
@@ -752,7 +755,7 @@ void mesh_load_glb(const std::string &filename, std::vector<TinyVector<Real, 3>>
                 else if (componentType == TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE)
                     add_faces(reinterpret_cast<const uint8_t *>(&indexBuffer.data[indexBufferView.byteOffset + indexAccessor.byteOffset]));
                 else
-                    std::cerr << "Unsupported index component type" << std::endl;
+                    std::cerr << "Unsupported index component type" << '\n';
             }
         }
     }
@@ -761,8 +764,8 @@ void mesh_load_glb(const std::string &filename, std::vector<TinyVector<Real, 3>>
 template <typename Real>
 void mesh_load_vtk(const std::string &filename, std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vector<size_t>> &face_indices)
 {
-    vertices.resize(0);
-    face_indices.resize(0);
+    vertices.clear();
+    face_indices.clear();
     try
     {
         std::ifstream fin(filename);
@@ -796,7 +799,8 @@ void mesh_load_vtk(const std::string &filename, std::vector<TinyVector<Real, 3>>
     }
     catch (const std::exception &e)
     {
-        vertices.resize(0), face_indices.resize(0);
+        vertices.clear();
+        face_indices.clear();
         std::cerr << e.what() << '\n';
     }
 }
@@ -804,8 +808,8 @@ void mesh_load_vtk(const std::string &filename, std::vector<TinyVector<Real, 3>>
 template <typename Real>
 void mesh_load_vtp(const std::string &filename, std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vector<size_t>> &face_indices)
 {
-    vertices.resize(0);
-    face_indices.resize(0);
+    vertices.clear();
+    face_indices.clear();
     try
     {
         std::ifstream fin(filename);
@@ -912,7 +916,8 @@ void mesh_load_vtp(const std::string &filename, std::vector<TinyVector<Real, 3>>
     }
     catch (const std::exception &e)
     {
-        vertices.resize(0), face_indices.resize(0);
+        vertices.clear();
+        face_indices.clear();
         std::cerr << e.what() << '\n';
     }
 }
@@ -920,7 +925,8 @@ void mesh_load_vtp(const std::string &filename, std::vector<TinyVector<Real, 3>>
 template <typename Real>
 void mesh_load_wrl(const std::string &filename, std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vector<size_t>> &face_indices)
 {
-    vertices.resize(0), face_indices.resize(0);
+    vertices.clear();
+    face_indices.clear();
     try
     {
         std::ifstream fin(filename);
@@ -953,14 +959,14 @@ void mesh_load_wrl(const std::string &filename, std::vector<TinyVector<Real, 3>>
         {
             if (line.find("]") != std::string::npos)
                 break;
-            face.resize(0);
+            face.clear();
             std::istringstream iss(line);
             size_t idx;
             while (iss >> idx)
             {
-                if (idx == (size_t)-1)
+                if (idx == static_cast<size_t>(-1))
                     break;
-                face.push_back(idx);
+                face.emplace_back(idx);
             }
             if (!face.empty())
                 face_indices.emplace_back(face);
@@ -969,7 +975,8 @@ void mesh_load_wrl(const std::string &filename, std::vector<TinyVector<Real, 3>>
     }
     catch (const std::exception &e)
     {
-        vertices.resize(0), face_indices.resize(0);
+        vertices.clear();
+        face_indices.clear();
         std::cerr << e.what() << '\n';
     }
 }
@@ -977,12 +984,13 @@ void mesh_load_wrl(const std::string &filename, std::vector<TinyVector<Real, 3>>
 template <typename Real>
 void mesh_load_fbx(const std::string &filename, std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vector<size_t>> &face_indices)
 {
-    vertices.resize(0), face_indices.resize(0);
+    vertices.clear();
+    face_indices.clear();
 
     ufbx_scene *scene = ufbx_load_file(filename.c_str(), nullptr, nullptr);
     if (!scene)
     {
-        std::cerr << "Failed to load FBX file: " << filename << std::endl;
+        std::cerr << "Failed to load FBX file: " << filename << '\n';
         return;
     }
     for (size_t i = 0; i < scene->nodes.count; i++)
@@ -998,7 +1006,7 @@ void mesh_load_fbx(const std::string &filename, std::vector<TinyVector<Real, 3>>
         for (size_t f = 0; f < mesh->faces.count; f++)
         {
             ufbx_face face = mesh->faces.data[f];
-            face_offsets.push_back((uint32_t)corners.size());
+            face_offsets.emplace_back(static_cast<uint32_t>(corners.size()));
             for (size_t j = 0; j < face.num_indices; j++)
             {
                 size_t vi = face.index_begin + j;
@@ -1009,8 +1017,8 @@ void mesh_load_fbx(const std::string &filename, std::vector<TinyVector<Real, 3>>
         // Weld corners into shared vertices
         ufbx_vertex_stream stream;
         stream.data = corners.data();
-        stream.vertex_count = (uint32_t)corners.size();
-        stream.vertex_size = (uint32_t)sizeof(ufbx_vec3);
+        stream.vertex_count = static_cast<uint32_t>(corners.size());
+        stream.vertex_size = static_cast<uint32_t>(sizeof(ufbx_vec3));
         std::vector<uint32_t> corner_to_vertex(corners.size());
         auto num_vertices =
             ufbx_generate_indices(&stream, 1,
@@ -1022,7 +1030,7 @@ void mesh_load_fbx(const std::string &filename, std::vector<TinyVector<Real, 3>>
         {
             // apply geometric transform
             ufbx_vec3 v = ufbx_transform_position(&node->geometry_to_world, corners[i]);
-            vertices.emplace_back(TinyVector<Real, 3>((Real)v.x, (Real)v.y, (Real)v.z));
+            vertices.emplace_back(TinyVector<Real, 3>(static_cast<Real>(v.x), static_cast<Real>(v.y), static_cast<Real>(v.z)));
         }
         for (size_t f = 0; f < mesh->faces.count; f++)
         {
@@ -1045,7 +1053,7 @@ template <typename Real>
 MeshLib::Mesh3D<Real> *create_mesh(std::vector<MeshLib::HE_face<Real> *> component)
 {
     if (component.empty())
-        return 0;
+        return nullptr;
 
     MeshLib::Mesh3D<Real> *m_pmesh = new MeshLib::Mesh3D<Real>;
     std::unordered_map<MeshLib::HE_vert<Real> *, MeshLib::HE_vert<Real> *> vert_map;
@@ -1066,9 +1074,10 @@ MeshLib::Mesh3D<Real> *create_mesh(std::vector<MeshLib::HE_face<Real> *> compone
     {
         auto he = f->edge;
         std::vector<MeshLib::HE_vert<Real> *> face;
+        face.reserve(f->valence);
         do
         {
-            face.push_back(vert_map[he->vert]);
+            face.emplace_back(vert_map[he->vert]);
             he = he->next;
         } while (he != f->edge);
         m_pmesh->insert_face(face);
@@ -1091,7 +1100,8 @@ MeshLib::Mesh3D<Real> *create_mesh(const std::vector<TinyVector<Real, 3>> &verti
         bool encountered_nonmanifold = false;
         for (auto &f : face_indices)
         {
-            face.resize(0);
+            face.clear();
+            face.reserve(f.size());
             for (auto &vid : f)
                 face.emplace_back(mesh->get_vertex(vid));
             auto F = mesh->insert_face(face);
@@ -1104,12 +1114,12 @@ MeshLib::Mesh3D<Real> *create_mesh(const std::vector<TinyVector<Real, 3>> &verti
         if (!ignore_nonmanifold && encountered_nonmanifold)
         {
             delete mesh;
-            return 0;
+            return nullptr;
         }
         mesh->update_mesh();
         return mesh;
     }
-    return 0;
+    return nullptr;
 }
 ////////////////////////////////////////////////
 template <typename Real>
@@ -1135,7 +1145,7 @@ void mesh_decomposition(MeshLib::Mesh3D<Real> *mesh, std::vector<MeshLib::Mesh3D
         facequeue.push(face);
         face->tag = true;
         std::vector<MeshLib::HE_face<Real> *> component;
-        component.push_back(face);
+        component.emplace_back(face);
         size_t num_non_tri = 0;
         while (!facequeue.empty())
         {
@@ -1149,7 +1159,7 @@ void mesh_decomposition(MeshLib::Mesh3D<Real> *mesh, std::vector<MeshLib::Mesh3D
                 {
                     facequeue.push(he->pair->face);
                     he->pair->face->tag = true;
-                    component.push_back(he->pair->face);
+                    component.emplace_back(he->pair->face);
                     if (he->pair->face->valence > 3)
                         num_non_tri++;
                 }
@@ -1158,7 +1168,7 @@ void mesh_decomposition(MeshLib::Mesh3D<Real> *mesh, std::vector<MeshLib::Mesh3D
         }
 
         MeshLib::Mesh3D<Real> *component_mesh = create_mesh(component);
-        submeshes.push_back(component_mesh);
+        submeshes.emplace_back(component_mesh);
         // if (component_mesh->is_tri() || component_mesh->is_quad())
         //     submeshes.push_back(component_mesh);
         // else
@@ -1169,7 +1179,7 @@ void mesh_decomposition(MeshLib::Mesh3D<Real> *mesh, std::vector<MeshLib::Mesh3D
 template <typename Real>
 MeshLib::Mesh3D<Real> *LoadPLYmesh(const std::string &filename, std::vector<std::array<unsigned char, 3>> &ply_face_color)
 {
-    MeshLib::Mesh3D<Real> *m_pmesh = 0;
+    MeshLib::Mesh3D<Real> *m_pmesh = nullptr;
 
     try
     {
@@ -1185,9 +1195,10 @@ MeshLib::Mesh3D<Real> *LoadPLYmesh(const std::string &filename, std::vector<std:
         bool encountered_nonmanifold = false;
         for (size_t i = 0; i < fInd.size(); i++)
         {
-            vlist.resize(0);
+            vlist.clear();
+            vlist.reserve(fInd[i].size());
             for (size_t j = 0; j < fInd[i].size(); j++)
-                vlist.push_back(m_pmesh->get_vertex(fInd[i][j]));
+                vlist.emplace_back(m_pmesh->get_vertex(fInd[i][j]));
             auto F = m_pmesh->insert_face(vlist);
             if (!F)
             {
@@ -1198,7 +1209,7 @@ MeshLib::Mesh3D<Real> *LoadPLYmesh(const std::string &filename, std::vector<std:
         if (encountered_nonmanifold)
         {
             delete m_pmesh;
-            return 0;
+            return nullptr;
         }
         m_pmesh->update_mesh();
         std::vector<std::array<double, 3>> vNormal = plyIn.getVertexNormals();
@@ -1239,19 +1250,20 @@ MeshLib::Mesh3D<Real> *LoadPLYmesh(const std::string &filename, std::vector<std:
     }
     catch (const std::exception &e)
     {
-        std::cerr << e.what() << std::endl;
-        return 0;
+        std::cerr << e.what() << '\n';
+        return nullptr;
     }
 } ////////////////////////////////////////////////
 template <typename Real>
 void mesh_to_vertices_and_faces(MeshLib::Mesh3D<Real> *m_pmesh, std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vector<size_t>> &face_indices)
 {
-    vertices.resize(0), face_indices.resize(0);
+    vertices.clear();
+    face_indices.clear();
     if (!m_pmesh)
         return;
 
     vertices.resize(m_pmesh->get_num_of_vertices());
-    for (auto i = 0; i < m_pmesh->get_num_of_vertices(); i++)
+    for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_vertices(); ++i)
     {
         auto v = m_pmesh->get_vertex(i);
         vertices[i] = v->pos;
@@ -1260,14 +1272,15 @@ void mesh_to_vertices_and_faces(MeshLib::Mesh3D<Real> *m_pmesh, std::vector<Tiny
     face_indices.reserve(m_pmesh->get_num_of_faces());
     std::vector<size_t> face;
 
-    for (auto i = 0; i < m_pmesh->get_num_of_faces(); i++)
+    for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_faces(); ++i)
     {
         auto f = m_pmesh->get_face(i);
         auto he = f->edge;
-        face.resize(0);
+        face.clear();
+        face.reserve(f->valence);
         do
         {
-            face.push_back((size_t)he->pair->vert->id);
+            face.emplace_back(static_cast<size_t>(he->pair->vert->id));
             he = he->next;
         } while (he != f->edge);
         face_indices.emplace_back(face);

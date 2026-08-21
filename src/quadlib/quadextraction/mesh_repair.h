@@ -6,7 +6,7 @@ template <typename Real>
 class MyEdge
 {
 public:
-    MyEdge(MeshLib::HE_vert<Real> *u0 = 0, MeshLib::HE_vert<Real> *u1 = 0)
+    MyEdge(MeshLib::HE_vert<Real> *u0 = nullptr, MeshLib::HE_vert<Real> *u1 = nullptr) noexcept
     {
         if (u0 < u1)
         {
@@ -18,44 +18,26 @@ public:
         }
     }
     //////////////////////////////////////////////////////////////////////////
-    inline int operator==(const MyEdge &p) const
+    [[nodiscard]] bool operator==(const MyEdge &p) const noexcept
     {
-        for (int i = 0; i < 2; i++)
-        {
-            if (v[i] != p.v[i])
-            {
-                return 0;
-            }
-        }
-        return 1;
+        return v[0] == p.v[0] && v[1] == p.v[1];
     }
     //////////////////////////////////////////////////////////////////////////
-    inline int operator!=(const MyEdge &p) const
+    [[nodiscard]] bool operator!=(const MyEdge &p) const noexcept
     {
-        for (int i = 0; i < 2; i++)
-        {
-            if (v[i] != p.v[i])
-            {
-                return 1;
-            }
-        }
-        return 0;
+        return !(*this == p);
     }
     //////////////////////////////////////////////////////////////////////////
-    inline int operator<(const MyEdge &p) const
+    [[nodiscard]] bool operator<(const MyEdge &p) const noexcept
     {
         for (int i = 0; i < 2; i++)
         {
             if (v[i] < p.v[i])
-            {
-                return 1;
-            }
+                return true;
             else if (v[i] > p.v[i])
-            {
-                return 0;
-            }
+                return false;
         }
-        return 0;
+        return false;
     }
 
 public:

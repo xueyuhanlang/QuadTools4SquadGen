@@ -42,16 +42,13 @@ namespace MeshLib
 		ptrdiff_t id;				//!< index
 		unsigned int degree;		//!< the degree of vertex
 		bool tag;					//!< tag for programming easily
-	public:
 		//! constructor
 		HE_vert(const TinyVector<Real, 3> &v)
-			: pos(v), edge(0), id(-1), degree(0), tag(false)
+			: pos(v), edge(nullptr), id(-1), degree(0), tag(false)
 		{
 		}
 		// destructor
-		~HE_vert()
-		{
-		}
+		~HE_vert() = default;
 	};
 
 	//! edge class \ingroup MeshCore
@@ -69,24 +66,21 @@ namespace MeshLib
 		HE_edge<Real> *prev; //!< prev half-edge around the face
 		ptrdiff_t id;		 //!< index
 		bool tag;			 //!< tag for programming easily
-	public:
 		//! constructor
 		HE_edge()
-			: vert(0), pair(0), face(0), next(0), prev(0), id(-1), tag(false)
+			: vert(nullptr), pair(nullptr), face(nullptr), next(nullptr), prev(nullptr), id(-1), tag(false)
 		{
 		}
 		//! destructor
-		~HE_edge()
-		{
-		}
+		~HE_edge() = default;
 
 		//! compute the middle point
-		inline TinyVector<Real, 3> GetMidPoint()
+		[[nodiscard]] inline TinyVector<Real, 3> GetMidPoint() const
 		{
 			return (Real)0.5 * (vert->pos + pair->vert->pos);
 		}
 		//! compute the length
-		inline Real GetLength()
+		[[nodiscard]] inline Real GetLength() const
 		{
 			return (vert->pos - pair->vert->pos).Length();
 		}
@@ -108,19 +102,15 @@ namespace MeshLib
 		std::vector<ptrdiff_t> texture_indices; //! texture indices
 		std::vector<ptrdiff_t> normal_indices;	//! texture indices
 		int groupid;
-
-	public:
 		//! constructor
 		HE_face()
-			: edge(0), id(-1), tag(false), groupid(-1)
+			: edge(nullptr), id(-1), tag(false), groupid(-1)
 		{
 		}
 		//! destructor
-		~HE_face()
-		{
-		}
+		~HE_face() = default;
 		//! compute the barycenter
-		inline TinyVector<Real, 3> GetCentroid()
+		[[nodiscard]] inline TinyVector<Real, 3> GetCentroid() const
 		{
 			TinyVector<Real, 3> V(0, 0, 0);
 			HE_edge<Real> *he = edge;
@@ -134,7 +124,7 @@ namespace MeshLib
 			return V / Real(i);
 		}
 		//! compute the area
-		inline Real GetArea()
+		[[nodiscard]] inline Real GetArea() const
 		{
 			TinyVector<Real, 3> V(0, 0, 0);
 			HE_edge<Real> *he = edge;
@@ -146,14 +136,14 @@ namespace MeshLib
 			return V.Length() / 2;
 		}
 		//! whether texture_indices exists
-		bool has_texture_map()
+		[[nodiscard]] bool has_texture_map() const
 		{
-			return (!texture_indices.empty()) && (texture_indices.size() == (size_t)valence);
+			return (!texture_indices.empty()) && (texture_indices.size() == static_cast<size_t>(valence));
 		}
 		//! whether normal_indices exists
-		bool has_normal_map()
+		[[nodiscard]] bool has_normal_map() const
 		{
-			return (!normal_indices.empty()) && (normal_indices.size() == (size_t)valence);
+			return (!normal_indices.empty()) && (normal_indices.size() == static_cast<size_t>(valence));
 		}
 	};
 
@@ -200,22 +190,22 @@ namespace MeshLib
 	{
 	public:
 		// type definition
-		typedef std::vector<HE_vert<Real> *> VERTEX_LIST;
-		typedef std::vector<HE_face<Real> *> FACE_LIST;
-		typedef std::vector<HE_edge<Real> *> EDGE_LIST;
+		using VERTEX_LIST = std::vector<HE_vert<Real> *>;
+		using FACE_LIST = std::vector<HE_face<Real> *>;
+		using EDGE_LIST = std::vector<HE_edge<Real> *>;
 
-		typedef VERTEX_LIST *PTR_VERTEX_LIST;
-		typedef FACE_LIST *PTR_FACE_LIST;
-		typedef EDGE_LIST *PTR_EDGE_LIST;
+		using PTR_VERTEX_LIST = VERTEX_LIST *;
+		using PTR_FACE_LIST = FACE_LIST *;
+		using PTR_EDGE_LIST = EDGE_LIST *;
 
-		typedef typename VERTEX_LIST::iterator VERTEX_ITER;
-		typedef typename FACE_LIST::iterator FACE_ITER;
-		typedef typename EDGE_LIST::iterator EDGE_ITER;
+		using VERTEX_ITER = typename VERTEX_LIST::iterator;
+		using FACE_ITER = typename FACE_LIST::iterator;
+		using EDGE_ITER = typename EDGE_LIST::iterator;
 
-		typedef typename VERTEX_LIST::reverse_iterator VERTEX_RITER;
-		typedef typename FACE_LIST::reverse_iterator FACE_RITER;
-		typedef typename EDGE_LIST::reverse_iterator EDGE_RITER;
-		typedef std::pair<HE_vert<Real> *, HE_vert<Real> *> PAIR_VERTEX;
+		using VERTEX_RITER = typename VERTEX_LIST::reverse_iterator;
+		using FACE_RITER = typename FACE_LIST::reverse_iterator;
+		using EDGE_RITER = typename EDGE_LIST::reverse_iterator;
+		using PAIR_VERTEX = std::pair<HE_vert<Real> *, HE_vert<Real> *>;
 
 	protected:
 		// mesh data
@@ -253,7 +243,6 @@ namespace MeshLib
 		std::vector<std::vector<HE_vert<Real> *>> boundaryvertices;
 		std::vector<std::string> groupname;
 
-	public:
 		//! constructor
 		Mesh3D(void);
 
@@ -261,79 +250,79 @@ namespace MeshLib
 		~Mesh3D(void);
 
 		//! get the pointer of vertices list
-		inline PTR_VERTEX_LIST get_vertices_list()
+		[[nodiscard]] inline PTR_VERTEX_LIST get_vertices_list() const
 		{
 			return vertices_list;
 		}
 
 		//! get the pointer of edges list
-		inline PTR_EDGE_LIST get_edges_list()
+		[[nodiscard]] inline PTR_EDGE_LIST get_edges_list() const
 		{
 			return edges_list;
 		}
 
 		//! get the pointer of faces list
-		inline PTR_FACE_LIST get_faces_list()
+		[[nodiscard]] inline PTR_FACE_LIST get_faces_list() const
 		{
 			return faces_list;
 		}
 
 		//! get the total number of vertices
-		inline ptrdiff_t get_num_of_vertices()
+		[[nodiscard]] inline ptrdiff_t get_num_of_vertices() const
 		{
-			return vertices_list ? (ptrdiff_t)vertices_list->size() : 0;
+			return vertices_list ? static_cast<ptrdiff_t>(vertices_list->size()) : 0;
 		}
 
 		//! get the total number of faces
-		inline ptrdiff_t get_num_of_faces()
+		[[nodiscard]] inline ptrdiff_t get_num_of_faces() const
 		{
-			return faces_list ? (ptrdiff_t)faces_list->size() : 0;
+			return faces_list ? static_cast<ptrdiff_t>(faces_list->size()) : 0;
 		}
 
 		//! get the total number of half-edges
-		inline ptrdiff_t get_num_of_edges()
+		[[nodiscard]] inline ptrdiff_t get_num_of_edges() const
 		{
-			return edges_list ? (ptrdiff_t)edges_list->size() : 0;
+			return edges_list ? static_cast<ptrdiff_t>(edges_list->size()) : 0;
 		}
 
 		//! get the pointer of the id-th vertex
-		inline HE_vert<Real> *get_vertex(ptrdiff_t id)
+		[[nodiscard]] inline HE_vert<Real> *get_vertex(ptrdiff_t id) const
 		{
-			return id >= get_num_of_vertices() || id < 0 ? NULL : (*vertices_list)[id];
+			return id >= get_num_of_vertices() || id < 0 ? nullptr : (*vertices_list)[id];
 		}
 
 		//! get the pointer of the id-th edge
-		inline HE_edge<Real> *get_edge(ptrdiff_t id)
+		[[nodiscard]] inline HE_edge<Real> *get_edge(ptrdiff_t id) const
 		{
-			return id >= get_num_of_edges() || id < 0 ? NULL : (*edges_list)[id];
+			return id >= get_num_of_edges() || id < 0 ? nullptr : (*edges_list)[id];
 		}
 
 		//! get the pointer of the id-th face
-		inline HE_face<Real> *get_face(ptrdiff_t id)
+		[[nodiscard]] inline HE_face<Real> *get_face(ptrdiff_t id) const
 		{
-			return id >= get_num_of_faces() || id < 0 ? NULL : (*faces_list)[id];
+			return id >= get_num_of_faces() || id < 0 ? nullptr : (*faces_list)[id];
 		}
 
 		//! get the number of components
-		inline int get_num_of_components()
+		[[nodiscard]] inline int get_num_of_components() const
 		{
 			return m_num_components;
 		}
 
 		//! get the number of boundaries
-		inline int get_num_of_boundaries()
+		[[nodiscard]] inline int get_num_of_boundaries() const
 		{
 			return m_num_boundaries;
 		}
 
 		//! get the genus
-		inline int genus()
+		[[nodiscard]] inline int genus() const
 		{
 			return m_genus;
 		}
 
 		//! check whether the mesh is valid
-		inline bool is_valid()
+		[[nodiscard]] inline bool is_valid() const
 		{
 			if (get_num_of_vertices() == 0 || get_num_of_faces() == 0)
 			{
@@ -343,31 +332,31 @@ namespace MeshLib
 		}
 
 		//! check whether the mesh is closed
-		inline bool is_closed()
+		[[nodiscard]] inline bool is_closed() const
 		{
 			return m_closed;
 		}
 
 		//! check whether the mesh is triangular
-		inline bool is_tri()
+		[[nodiscard]] inline bool is_tri() const
 		{
 			return m_tri;
 		}
 
 		//! check whether the mesh is quadrilateral
-		inline bool is_quad()
+		[[nodiscard]] inline bool is_quad() const
 		{
 			return m_quad;
 		}
 
 		//! check whether the mesh is hexgaonal
-		inline bool is_hex()
+		[[nodiscard]] inline bool is_hex() const
 		{
 			return m_hex;
 		}
 
 		//! check whether the mesh is pentagonal
-		inline bool is_pentagon()
+		[[nodiscard]] inline bool is_pentagon() const
 		{
 			return m_pentagon;
 		}
@@ -386,14 +375,14 @@ namespace MeshLib
 		 *	\param normal the normal of texture vector
 		 *	\return a pointer to the created face
 		 */
-		HE_face<Real> *insert_face(VERTEX_LIST &vec_hv, std::vector<ptrdiff_t> *texture = 0, std::vector<ptrdiff_t> *normal = 0);
+		HE_face<Real> *insert_face(VERTEX_LIST &vec_hv, std::vector<ptrdiff_t> *texture = nullptr, std::vector<ptrdiff_t> *normal = nullptr);
 
 		//! check whether the vertex is on border
-		bool is_on_boundary(HE_vert<Real> *hv);
+		[[nodiscard]] bool is_on_boundary(HE_vert<Real> *hv) const;
 		//! check whether the face is on border
-		bool is_on_boundary(HE_face<Real> *hf);
+		[[nodiscard]] bool is_on_boundary(HE_face<Real> *hf) const;
 		//! check whether the edge is on border
-		bool is_on_boundary(HE_edge<Real> *he);
+		[[nodiscard]] bool is_on_boundary(HE_edge<Real> *he) const;
 
 		// FILE IO
 
@@ -450,7 +439,7 @@ namespace MeshLib
 		void scale(Real factorx, Real factory, Real factorz);
 
 		//! check whether there is any non-manifold case
-		inline bool is_encounter_nonmanifold()
+		[[nodiscard]] inline bool is_encounter_nonmanifold() const
 		{
 			return m_encounter_non_manifold;
 		}
@@ -466,22 +455,22 @@ namespace MeshLib
 			normal_array.assign(normals.begin(), normals.end());
 		}
 		//! get texture array
-		std::vector<TinyVector<float, 2>> &get_texture_array()
+		[[nodiscard]] std::vector<TinyVector<float, 2>> &get_texture_array()
 		{
 			return texture_array;
 		}
 		//! get texture array
-		const std::vector<TinyVector<float, 2>> &get_texture_array() const
+		[[nodiscard]] const std::vector<TinyVector<float, 2>> &get_texture_array() const
 		{
 			return texture_array;
 		}
 		//! get normal array
-		std::vector<TinyVector<float, 3>> &get_normal_array()
+		[[nodiscard]] std::vector<TinyVector<float, 3>> &get_normal_array()
 		{
 			return normal_array;
 		}
 		//! get normal array
-		const std::vector<TinyVector<float, 3>> &get_normal_array() const
+		[[nodiscard]] const std::vector<TinyVector<float, 3>> &get_normal_array() const
 		{
 			return normal_array;
 		}
@@ -543,6 +532,6 @@ namespace MeshLib
 } // end of namespace
 
 // typedef MeshLib::Mesh3D<float> Mesh3f;
-typedef MeshLib::Mesh3D<double> Mesh3d;
+using Mesh3d = MeshLib::Mesh3D<double>;
 
 #endif // MESH3D_H

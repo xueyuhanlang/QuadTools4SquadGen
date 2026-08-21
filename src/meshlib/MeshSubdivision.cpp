@@ -7,27 +7,26 @@ namespace MeshLib
 	template <typename Real>
 	Mesh3D<Real> *MeshSubdivision<Real>::Catmull_Clark(std::vector<Real> *vert_color, std::vector<Real> *new_vert_color)
 	{
-		if (m_pmesh == NULL)
+		if (m_pmesh == nullptr)
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		Mesh3D<Real> *New_mesh = new Mesh3D<Real>;
 
 		if (new_vert_color)
 		{
-			new_vert_color->resize(0);
+			new_vert_color->clear();
 			new_vert_color->reserve(m_pmesh->get_num_of_vertices() + m_pmesh->get_num_of_faces() + m_pmesh->get_num_of_edges() / 2);
 		}
 
-		typename Mesh3D<Real>::PTR_VERTEX_LIST vertices_list = m_pmesh->get_vertices_list();
-		typename Mesh3D<Real>::VERTEX_ITER viter = vertices_list->begin();
+		const auto vertices_list = m_pmesh->get_vertices_list();
 
 		ptrdiff_t num_v = m_pmesh->get_num_of_vertices();
 
-		for (; viter != vertices_list->end(); viter++)
+		for (const auto *vertex : *vertices_list)
 		{
-			auto hv = New_mesh->insert_vertex((*viter)->pos);
+			auto hv = New_mesh->insert_vertex(vertex->pos);
 			if (new_vert_color)
 			{
 				new_vert_color->emplace_back((*vert_color)[hv->id]);
@@ -35,12 +34,11 @@ namespace MeshLib
 		}
 
 		// add face point
-		typename Mesh3D<Real>::PTR_FACE_LIST faces_list = m_pmesh->get_faces_list();
-		typename Mesh3D<Real>::FACE_ITER fiter = faces_list->begin();
+		auto faces_list = m_pmesh->get_faces_list();
 
-		for (; fiter != faces_list->end(); fiter++)
+		for (const auto *face : *faces_list)
 		{
-			HE_edge<Real> *edge = (*fiter)->edge;
+			HE_edge<Real> *edge = face->edge;
 			TinyVector<Real, 3> vv(0, 0, 0);
 			int degree = 0;
 			do
@@ -48,9 +46,9 @@ namespace MeshLib
 				vv += edge->vert->pos;
 				degree++;
 				edge = edge->next;
-			} while (edge != (*fiter)->edge);
+			} while (edge != face->edge);
 
-			TinyVector<Real, 3> nvv = vv / (Real)degree;
+			TinyVector<Real, 3> nvv = vv / static_cast<Real>(degree);
 			New_mesh->insert_vertex(nvv);
 
 			if (new_vert_color)
@@ -61,22 +59,19 @@ namespace MeshLib
 					min_color = std::min(min_color, (*vert_color)[edge->vert->id]);
 					max_color = std::max(max_color, (*vert_color)[edge->vert->id]);
 					edge = edge->next;
-				} while (edge != (*fiter)->edge);
+				} while (edge != face->edge);
 				new_vert_color->emplace_back((min_color + max_color) / 2);
 			}
 		}
 
 		// add edge point
-		typename Mesh3D<Real>::PTR_EDGE_LIST edges_list = m_pmesh->get_edges_list();
-		typename Mesh3D<Real>::EDGE_ITER eiter = edges_list->begin();
+		const auto edges_list = m_pmesh->get_edges_list();
 
 		std::unordered_map<HE_edge<Real> *, HE_vert<Real> *> m_map_edge_vert;
 
-		for (; eiter != edges_list->end(); eiter++)
+		for (auto *edge : *edges_list)
 		{
-			HE_edge<Real> *edge = *eiter;
-
-			if (m_map_edge_vert[edge] == NULL && m_map_edge_vert[edge->pair] == NULL)
+			if (m_map_edge_vert.find(edge) == m_map_edge_vert.end() && m_map_edge_vert.find(edge->pair) == m_map_edge_vert.end())
 			{
 				TinyVector<Real, 3> vv = edge->pair->vert->pos + edge->vert->pos;
 
@@ -97,7 +92,7 @@ namespace MeshLib
 					}
 				}
 
-				TinyVector<Real, 3> nvv = vv / (Real)n;
+				TinyVector<Real, 3> nvv = vv / static_cast<Real>(n);
 				HE_vert<Real> *hv = New_mesh->insert_vertex(nvv);
 
 				m_map_edge_vert[edge] = hv;
@@ -111,15 +106,14 @@ namespace MeshLib
 		}
 
 		// add updated original point
-		vertices_list = m_pmesh->get_vertices_list();
-		viter = vertices_list->begin();
-
 		int id = 0;
-		for (; viter != vertices_list->end(); viter++, id++)
+		for (auto *vertex : *vertices_list)
 		{
-			if ((*viter)->degree == 2)
+			if (vertex->degree == 2)
 			{
 				HE_vert<Real> *cv = New_mesh->get_vertex(id);
+				(void)cv;
+				++id;
 				continue;
 			}
 
@@ -133,9 +127,9 @@ namespace MeshLib
 			// S is the old vertex point, and
 			// n is the number of edges that share the old vertex.
 
-			if (!m_pmesh->is_on_boundary(*viter))
+			if (!m_pmesh->is_on_boundary(vertex))
 			{
-				HE_edge<Real> *edge = (*viter)->edge;
+				HE_edge<Real> *edge = vertex->edge;
 				TinyVector<Real, 3> q(0, 0, 0);
 				TinyVector<Real, 3> r(0, 0, 0);
 				int facedegree = 0;
@@ -150,23 +144,23 @@ namespace MeshLib
 						facedegree++;
 					}
 
-					r += (edge->vert->pos + edge->pair->vert->pos) * (Real)0.5;
+					r += (edge->vert->pos + edge->pair->vert->pos) * Real(0.5);
 
 					edge = edge->pair->next;
 					edgedegree++;
-				} while (edge != (*viter)->edge);
+				} while (edge != vertex->edge);
 
-				q /= (Real)facedegree;
-				r /= (Real)edgedegree;
+				q /= static_cast<Real>(facedegree);
+				r /= static_cast<Real>(edgedegree);
 
-				TinyVector<Real, 3> nvv = (q + (Real)2.0 * r + (Real)(edgedegree - 3) * (*viter)->pos) / (Real)edgedegree;
+				TinyVector<Real, 3> nvv = (q + Real(2.0) * r + static_cast<Real>(edgedegree - 3) * vertex->pos) / static_cast<Real>(edgedegree);
 
 				HE_vert<Real> *cv = New_mesh->get_vertex(id);
 				cv->pos = nvv;
 			}
 			else
 			{
-				HE_vert<Real> *hv = *viter;
+				HE_vert<Real> *hv = vertex;
 				HE_edge<Real> *edge = hv->edge;
 
 				HE_vert<Real> *v1 = edge->vert;
@@ -177,37 +171,29 @@ namespace MeshLib
 				} while (edge->pair->next != hv->edge);
 
 				HE_vert<Real> *v2 = edge->vert;
-				TinyVector<Real, 3> nvv = (Real)0.125 * (v1->pos + v2->pos) + (Real)0.75 * hv->pos;
+				TinyVector<Real, 3> nvv = Real(0.125) * (v1->pos + v2->pos) + Real(0.75) * hv->pos;
 				HE_vert<Real> *cv = New_mesh->get_vertex(id);
 				cv->pos = nvv;
 			}
+			++id;
 		}
 
 		// add face
-		faces_list = m_pmesh->get_faces_list();
-		fiter = faces_list->begin();
-
-		for (; fiter != faces_list->end(); fiter++)
+		for (const auto *face : *faces_list)
 		{
-			HE_vert<Real> *hv_face = New_mesh->get_vertex((*fiter)->id + num_v);
-			HE_edge<Real> *edge = (*fiter)->edge;
+			HE_vert<Real> *hv_face = New_mesh->get_vertex(face->id + num_v);
+			HE_edge<Real> *edge = face->edge;
 
 			do
 			{
 				typename Mesh3D<Real>::VERTEX_LIST mvlist;
-
-				// assert(hv_face);
-				// assert(m_map_edge_vert[edge]);
-				// assert(New_mesh->get_vertex(edge->vert->id));
-				// assert(m_map_edge_vert[edge->next]);
-
 				mvlist.emplace_back(hv_face);
 				mvlist.emplace_back(m_map_edge_vert[edge]);
 				mvlist.emplace_back(New_mesh->get_vertex(edge->vert->id));
 				mvlist.emplace_back(m_map_edge_vert[edge->next]);
 				New_mesh->insert_face(mvlist);
 				edge = edge->next;
-			} while (edge != (*fiter)->edge);
+			} while (edge != face->edge);
 		}
 
 		m_map_edge_vert.clear();
@@ -223,30 +209,28 @@ namespace MeshLib
 
 		if (new_vert_color)
 		{
-			new_vert_color->resize(0);
+			new_vert_color->clear();
 			new_vert_color->reserve(m_pmesh->get_num_of_vertices() + m_pmesh->get_num_of_faces() + m_pmesh->get_num_of_edges() / 2);
 		}
 		// add original point
-		typename Mesh3D<Real>::PTR_VERTEX_LIST vertices_list = m_pmesh->get_vertices_list();
-		typename Mesh3D<Real>::VERTEX_ITER viter = vertices_list->begin();
+		const auto vertices_list = m_pmesh->get_vertices_list();
 
 		ptrdiff_t num_v = m_pmesh->get_num_of_vertices();
 
-		for (; viter != vertices_list->end(); viter++)
+		for (const auto *vertex : *vertices_list)
 		{
-			auto hv = New_mesh->insert_vertex((*viter)->pos);
+			auto hv = New_mesh->insert_vertex(vertex->pos);
 			if (new_vert_color)
 			{
 				new_vert_color->emplace_back((*vert_color)[hv->id]);
 			}
 		}
 		// add face point
-		typename Mesh3D<Real>::PTR_FACE_LIST faces_list = m_pmesh->get_faces_list();
-		typename Mesh3D<Real>::FACE_ITER fiter = faces_list->begin();
+		auto faces_list = m_pmesh->get_faces_list();
 
-		for (; fiter != faces_list->end(); fiter++)
+		for (const auto *face : *faces_list)
 		{
-			HE_edge<Real> *edge = (*fiter)->edge;
+			HE_edge<Real> *edge = face->edge;
 			TinyVector<Real, 3> vv(0, 0, 0);
 			int degree = 0;
 			do
@@ -254,9 +238,9 @@ namespace MeshLib
 				vv += edge->vert->pos;
 				degree++;
 				edge = edge->next;
-			} while (edge != (*fiter)->edge);
+			} while (edge != face->edge);
 
-			TinyVector<Real, 3> nvv = vv / (Real)degree;
+			TinyVector<Real, 3> nvv = vv / static_cast<Real>(degree);
 			New_mesh->insert_vertex(nvv);
 
 			if (new_vert_color)
@@ -267,23 +251,21 @@ namespace MeshLib
 					min_color = std::min(min_color, (*vert_color)[edge->vert->id]);
 					max_color = std::max(max_color, (*vert_color)[edge->vert->id]);
 					edge = edge->next;
-				} while (edge != (*fiter)->edge);
+				} while (edge != face->edge);
 				new_vert_color->emplace_back((min_color + max_color) / 2);
 			}
 		}
 
 		// add edge point
-		typename Mesh3D<Real>::PTR_EDGE_LIST edges_list = m_pmesh->get_edges_list();
-		typename Mesh3D<Real>::EDGE_ITER eiter = edges_list->begin();
+		const auto edges_list = m_pmesh->get_edges_list();
 
 		std::unordered_map<HE_edge<Real> *, HE_vert<Real> *> m_map_edge_vert;
 
-		for (; eiter != edges_list->end(); eiter++)
+		for (auto *edge : *edges_list)
 		{
-			HE_edge<Real> *edge = *eiter;
-			if (m_map_edge_vert[edge] == NULL && m_map_edge_vert[edge->pair] == NULL)
+			if (m_map_edge_vert.find(edge) == m_map_edge_vert.end() && m_map_edge_vert.find(edge->pair) == m_map_edge_vert.end())
 			{
-				TinyVector<Real, 3> nvv = (Real)0.5 * (edge->pair->vert->pos + edge->vert->pos);
+				TinyVector<Real, 3> nvv = Real(0.5) * (edge->pair->vert->pos + edge->vert->pos);
 				HE_vert<Real> *hv = New_mesh->insert_vertex(nvv);
 				m_map_edge_vert[edge] = hv;
 				m_map_edge_vert[edge->pair] = hv;
@@ -296,13 +278,10 @@ namespace MeshLib
 		}
 
 		// add face
-		faces_list = m_pmesh->get_faces_list();
-		fiter = faces_list->begin();
-
-		for (; fiter != faces_list->end(); fiter++)
+		for (const auto *face : *faces_list)
 		{
-			HE_vert<Real> *hv_face = New_mesh->get_vertex((*fiter)->id + num_v);
-			HE_edge<Real> *edge = (*fiter)->edge;
+			HE_vert<Real> *hv_face = New_mesh->get_vertex(face->id + num_v);
+			HE_edge<Real> *edge = face->edge;
 
 			do
 			{
@@ -313,7 +292,7 @@ namespace MeshLib
 				mvlist.emplace_back(m_map_edge_vert[edge->next]);
 				New_mesh->insert_face(mvlist);
 				edge = edge->next;
-			} while (edge != (*fiter)->edge);
+			} while (edge != face->edge);
 		}
 		m_map_edge_vert.clear();
 		New_mesh->update_mesh();
@@ -326,22 +305,21 @@ namespace MeshLib
 	{
 		Mesh3D<Real> *New_mesh = new Mesh3D<Real>;
 		// add original point
-		typename Mesh3D<Real>::PTR_VERTEX_LIST vertices_list = m_pmesh->get_vertices_list();
-		typename Mesh3D<Real>::VERTEX_ITER viter = vertices_list->begin();
+		const auto vertices_list = m_pmesh->get_vertices_list();
 
 		ptrdiff_t num_v = m_pmesh->get_num_of_vertices();
 
-		for (; viter != vertices_list->end(); viter++)
+		for (const auto *vertex : *vertices_list)
 		{
-			auto hv = New_mesh->insert_vertex((*viter)->pos);
+			auto hv = New_mesh->insert_vertex(vertex->pos);
+			(void)hv;
 		}
 		// add face point
-		typename Mesh3D<Real>::PTR_FACE_LIST faces_list = m_pmesh->get_faces_list();
-		typename Mesh3D<Real>::FACE_ITER fiter = faces_list->begin();
+		auto faces_list = m_pmesh->get_faces_list();
 
-		for (; fiter != faces_list->end(); fiter++)
+		for (const auto *face : *faces_list)
 		{
-			HE_edge<Real> *edge = (*fiter)->edge;
+			HE_edge<Real> *edge = face->edge;
 			TinyVector<Real, 3> vv(0, 0, 0);
 			int degree = 0;
 			do
@@ -349,23 +327,16 @@ namespace MeshLib
 				vv += edge->vert->pos;
 				degree++;
 				edge = edge->next;
-			} while (edge != (*fiter)->edge);
+			} while (edge != face->edge);
 
-			TinyVector<Real, 3> nvv = vv / (Real)degree;
+			TinyVector<Real, 3> nvv = vv / static_cast<Real>(degree);
 			New_mesh->insert_vertex(nvv);
 
-			// std::set<ptrdiff_t> face_belonging_clusters;
 			std::set<ptrdiff_t> face_belonging_clusters_intersection = vertex_belonging_clusters[edge->pair->vert->id];
 			std::set<ptrdiff_t> face_belonging_clusters_union;
 			do
 			{
 				auto &v_clusters = vertex_belonging_clusters[edge->vert->id];
-				// std::set<ptrdiff_t> unionset;
-				// std::set_union(face_belonging_clusters.begin(), face_belonging_clusters.end(),
-				// 			   v_clusters.begin(), v_clusters.end(),
-				// 			   std::inserter(unionset, unionset.begin()));
-				// face_belonging_clusters = unionset;
-
 				std::set<ptrdiff_t> intersection;
 				std::set_intersection(face_belonging_clusters_intersection.begin(), face_belonging_clusters_intersection.end(),
 									  v_clusters.begin(), v_clusters.end(),
@@ -375,32 +346,26 @@ namespace MeshLib
 				face_belonging_clusters_union.insert(v_clusters.begin(), v_clusters.end());
 
 				edge = edge->next;
-			} while (edge != (*fiter)->edge);
+			} while (edge != face->edge);
 
 			if (!face_belonging_clusters_intersection.empty())
-				vertex_belonging_clusters.emplace_back(face_belonging_clusters_intersection);
+			vertex_belonging_clusters.emplace_back(face_belonging_clusters_intersection);
 			else
 			{ // should not happen
-				vertex_belonging_clusters.emplace_back(face_belonging_clusters_union);
+			vertex_belonging_clusters.emplace_back(face_belonging_clusters_union);
 			}
-			// if (face_belonging_clusters_intersection.size() == 0)
-			// {
-			// 	std::cerr << "Warning: face not belonging to any cluster!" << std::endl;
-			// }
 		}
 		// add edge point
-		typename Mesh3D<Real>::PTR_EDGE_LIST edges_list = m_pmesh->get_edges_list();
-		typename Mesh3D<Real>::EDGE_ITER eiter = edges_list->begin();
+		const auto edges_list = m_pmesh->get_edges_list();
 
 		std::unordered_map<HE_edge<Real> *, HE_vert<Real> *> m_map_edge_vert;
 
-		for (; eiter != edges_list->end(); eiter++)
+		for (auto *edge : *edges_list)
 		{
-			HE_edge<Real> *edge = *eiter;
-			if (m_map_edge_vert[edge] == NULL && m_map_edge_vert[edge->pair] == NULL)
+			if (m_map_edge_vert.find(edge) == m_map_edge_vert.end() && m_map_edge_vert.find(edge->pair) == m_map_edge_vert.end())
 			{
-				TinyVector<Real, 3> nvv = (Real)0.5 * (edge->pair->vert->pos + edge->vert->pos);
-				HE_vert<Real> *hv = New_mesh->insert_vertex(nvv);
+			TinyVector<Real, 3> nvv = Real(0.5) * (edge->pair->vert->pos + edge->vert->pos);
+			HE_vert<Real> *hv = New_mesh->insert_vertex(nvv);
 				m_map_edge_vert[edge] = hv;
 				m_map_edge_vert[edge->pair] = hv;
 
@@ -415,22 +380,14 @@ namespace MeshLib
 								   std::inserter(edge_belonging_clusters, edge_belonging_clusters.begin()));
 				vertex_belonging_clusters.emplace_back(edge_belonging_clusters);
 
-				if (edge_belonging_clusters.size() == 0)
+				if (edge_belonging_clusters.empty())
 				{
-					std::cerr << "Warning: edge not belonging to any cluster!" << std::endl;
+					std::cerr << "Warning: edge not belonging to any cluster!" << '\n';
 				}
 
 				if (vertex_to_edgearc_ids.find(edge->vert->id) != vertex_to_edgearc_ids.end() &&
 					vertex_to_edgearc_ids.find(edge->pair->vert->id) != vertex_to_edgearc_ids.end())
 				{
-					// if (edge->face && edge->pair->face)
-					// {
-					// 	auto sharp_angle = compute_dihedral_angle(edge);
-					// 	if (sharp_angle > 150)
-					// 	{
-					// 		continue;
-					// 	}
-					// }
 					std::set<int> edgearc_id;
 					std::set_intersection(vertex_to_edgearc_ids[edge->vert->id].begin(), vertex_to_edgearc_ids[edge->vert->id].end(),
 										  vertex_to_edgearc_ids[edge->pair->vert->id].begin(), vertex_to_edgearc_ids[edge->pair->vert->id].end(),
@@ -444,13 +401,10 @@ namespace MeshLib
 		}
 
 		// add face
-		faces_list = m_pmesh->get_faces_list();
-		fiter = faces_list->begin();
-
-		for (; fiter != faces_list->end(); fiter++)
+		for (const auto *face : *faces_list)
 		{
-			HE_vert<Real> *hv_face = New_mesh->get_vertex((*fiter)->id + num_v);
-			HE_edge<Real> *edge = (*fiter)->edge;
+			HE_vert<Real> *hv_face = New_mesh->get_vertex(face->id + num_v);
+			HE_edge<Real> *edge = face->edge;
 
 			do
 			{
@@ -461,7 +415,7 @@ namespace MeshLib
 				mvlist.emplace_back(m_map_edge_vert[edge->next]);
 				New_mesh->insert_face(mvlist);
 				edge = edge->next;
-			} while (edge != (*fiter)->edge);
+			} while (edge != face->edge);
 		}
 		m_map_edge_vert.clear();
 		New_mesh->update_mesh();
@@ -473,12 +427,12 @@ namespace MeshLib
 	{
 		if (m_pmesh->is_tri() == false)
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		if (vert_color_comb)
 		{
-			vert_color_comb->resize(0);
+			vert_color_comb->clear();
 			vert_color_comb->reserve(m_pmesh->get_num_of_vertices() + m_pmesh->get_num_of_edges() / 2);
 		}
 
@@ -507,7 +461,7 @@ namespace MeshLib
 			HE_edge<Real> *he = *eiter;
 			if (he->tag)
 			{
-				auto V = (Real)0.5 * (he->vert->pos + he->pair->vert->pos);
+				auto V = Real(0.5) * (he->vert->pos + he->pair->vert->pos);
 				HE_vert<Real> *hv = newmesh->insert_vertex(V);
 				edgemap[he] = hv;
 				edgemap[he->pair] = hv;

@@ -22,8 +22,8 @@ int main(int argc, char **argv)
         auto result = options.parse(argc, argv);
         if (result.count("help"))
         {
-            std::cout << options.help({"", "Group"}) << std::endl;
-            exit(0);
+            std::cout << options.help({"", "Group"}) << '\n';
+            return 0;
         }
 
         if (result.count("i"))
@@ -32,34 +32,36 @@ int main(int argc, char **argv)
 
             if (!std::filesystem::exists(inputfile))
             {
-                std::cout << "The input file does not exist!" << std::endl;
-                exit(0);
+                std::cout << "The input file does not exist!\n";
+                return 1;
             }
 
             std::string ext = GetFileExtension(inputfile);
-            MeshLib::Mesh3D<double> *mesh = 0;
+            MeshLib::Mesh3D<double> *mesh = nullptr;
             bool load_success = true;
             std::vector<std::array<unsigned char, 3>> ply_face_color;
             if (ext == "ply")
             {
                 mesh = LoadPLYmesh<double>(inputfile.c_str(), ply_face_color);
-                load_success = mesh != 0;
+                load_success = (mesh != nullptr);
             }
             else
             {
-                std::cout << "Unsupported file format!" << std::endl;
-                exit(0);
+                std::cout << "Unsupported file format!\n";
+                return 1;
             }
 
             if (!load_success)
             {
-                std::cout << "The input file is loaded incorrectly (non-manifold)!" << std::endl;
+                std::cout << "The input file is loaded incorrectly (non-manifold)!\n";
                 if (mesh)
                     delete mesh;
-                exit(0);
+                return 1;
             }
 
-            std::string outputfilename = result.count("o") ? result["o"].as<std::string>() : inputfile.substr(0, inputfile.find_last_of(".")) + ".svg";
+            std::string outputfilename = result.count("o")
+                ? result["o"].as<std::string>()
+                : std::filesystem::path(inputfile).replace_extension(".svg").string();
             if (result.count("o"))
             {
                 auto outputdir = GetFileDirectory(outputfilename);
@@ -76,14 +78,14 @@ int main(int argc, char **argv)
         }
         else
         {
-            std::cout << "No input file!" << std::endl;
-            exit(0);
+            std::cout << "No input file!\n";
+            return 1;
         }
     }
     catch (const cxxopts::exceptions::exception &e)
     {
-        std::cout << "Error parsing options: " << e.what() << std::endl;
-        exit(0);
+        std::cout << "Error parsing options: " << e.what() << '\n';
+        return 1;
     }
     return 0;
 }

@@ -23,7 +23,7 @@ BlockGen<Real>::BlockGen(int _block_num, int _resolution, bool _use_ccsubdiv, in
     if (block_mesh)
         quad_mesh = mesh_subdiv(block_mesh);
     else
-        quad_mesh = 0;
+        quad_mesh = nullptr;
 }
 template <typename Real>
 BlockGen<Real>::~BlockGen()
@@ -440,7 +440,7 @@ MeshLib::Mesh3D<Real> *BlockGen<Real>::create_block_mesh()
     blocks.reserve(block_num);
 
     if (seed == -1)
-        srand((unsigned int)time(NULL));
+        srand(static_cast<unsigned int>(time(nullptr)));
     else
         srand(seed);
 
@@ -527,13 +527,13 @@ MeshLib::Mesh3D<Real> *BlockGen<Real>::create_block_mesh()
         }
         num_tunnels++;
     }
-    // std::cout << "Create " << num_tunnels << " tunnels!" << std::endl;
-    // std::cout << num_trials << " trials to create tunnels!" << std::endl;
-    // std::cout << "Remove " << remove_counter << " blocks to create tunnels!" << std::endl;
+    // std::cout << "Create " << num_tunnels << " tunnels!" << '\n';
+    // std::cout << num_trials << " trials to create tunnels!" << '\n';
+    // std::cout << "Remove " << remove_counter << " blocks to create tunnels!" << '\n';
 
     if (blocks.size() == remove_counter)
     {
-        std::cerr << "No valid block is generated!" << std::endl;
+        std::cerr << "No valid block is generated!" << '\n';
         exit(0);
     }
 
@@ -600,7 +600,7 @@ MeshLib::Mesh3D<Real> *BlockGen<Real>::create_block_mesh()
         if (vertex->degree != 4)
             irregular_count++;
     }
-    std::cout << "Irreguar vertices: " << irregular_count << std::endl;
+    std::cout << "Irreguar vertices: " << irregular_count << '\n';
 
     return mesh;
 }
@@ -664,9 +664,9 @@ MeshLib::Mesh3D<Real> *BlockGen<Real>::pick_max_mesh_compoent(MeshLib::Mesh3D<Re
     // {
     // 	std::cout << g << " ";
     // }
-    // std::cout << std::endl;
-    // std::cout << "num_components: " << num_components << std::endl;
-    // std::cout << "genus: " << cur_genus << std::endl;
+    // std::cout << '\n';
+    // std::cout << "num_components: " << num_components << '\n';
+    // std::cout << "genus: " << cur_genus << '\n';
     mesh_genus = cur_genus;
     if (num_components == 1)
         return mesh;
@@ -690,7 +690,7 @@ int BlockGen<Real>::compute_genus(const std::vector<MeshLib::HE_face<Real> *> &c
     size_t num_faces = component.size();
     size_t num_vertices = vert_set.size();
     size_t num_edges = num_faces * 2;
-    int genus = (int)(2 + num_edges - num_vertices - num_faces) / 2;
+    int genus = static_cast<int>(2 + num_edges - num_vertices - num_faces) / 2;
     return genus;
 }
 ////////////////////////////////////////////////
@@ -699,9 +699,9 @@ MeshLib::Mesh3D<Real> *BlockGen<Real>::mesh_subdiv(MeshLib::Mesh3D<Real> *block_
 {
     if (scale_range != 1.0)
     {
-        auto x_scale = (Real)rand() / RAND_MAX;
-        auto y_scale = (Real)rand() / RAND_MAX;
-        auto z_scale = (Real)rand() / RAND_MAX;
+        auto x_scale = static_cast<Real>(rand()) / RAND_MAX;
+        auto y_scale = static_cast<Real>(rand()) / RAND_MAX;
+        auto z_scale = static_cast<Real>(rand()) / RAND_MAX;
         x_scale = x_scale * scale_range + (1 - x_scale);
         y_scale = y_scale * scale_range + (1 - y_scale);
         z_scale = z_scale * scale_range + (1 - z_scale);
@@ -719,8 +719,8 @@ MeshLib::Mesh3D<Real> *BlockGen<Real>::mesh_subdiv(MeshLib::Mesh3D<Real> *block_
         // apply jitter
         for (ptrdiff_t i = 0; i < block_mesh->get_num_of_vertices(); i++)
         {
-            TinyVector<Real, 3> V((Real)rand() / RAND_MAX - 0.5, (Real)rand() / RAND_MAX - 0.5, (Real)rand() / RAND_MAX - 0.5);
-            block_mesh->get_vertex(i)->pos += ((Real)perturb_level / resolution) * V;
+            TinyVector<Real, 3> V(static_cast<Real>(rand()) / RAND_MAX - 0.5, static_cast<Real>(rand()) / RAND_MAX - 0.5, static_cast<Real>(rand()) / RAND_MAX - 0.5);
+            block_mesh->get_vertex(i)->pos += (static_cast<Real>(perturb_level) / resolution) * V;
         }
         MeshLib::MeshSubdivision<Real> subdiv(block_mesh);
         auto subdivmesh = use_ccsubdiv ? subdiv.Catmull_Clark() : subdiv.SplitQuad();

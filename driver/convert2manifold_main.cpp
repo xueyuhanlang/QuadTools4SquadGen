@@ -23,20 +23,18 @@ int main(int argc, char **argv)
         auto result = options.parse(argc, argv);
         if (result.count("help"))
         {
-            std::cout << options.help({"", "Group"}) << std::endl;
-            exit(0);
+            std::cout << options.help({"", "Group"}) << '\n';
+            return 0;
         }
 
         if (result.count("i") == 0)
         {
-            std::cout << "No input file!" << std::endl;
-            std::cout << "Please use -i option" << std::endl;
-            exit(0);
+            std::cout << "No input file!\nPlease use -i option\n";
+            return 1;
         }
         if (result.count("o") == 0)
         {
-            std::cout << "No output file!" << std::endl;
-            std::cout << "Please use -o option" << std::endl;
+            std::cout << "No output file!\nPlease use -o option\n";
         }
 
         auto inputfile = result["i"].as<std::string>();
@@ -64,8 +62,8 @@ int main(int argc, char **argv)
     }
     catch (const cxxopts::exceptions::exception &e)
     {
-        std::cout << "Error parsing options: " << e.what() << std::endl;
-        exit(0);
+        std::cout << "Error parsing options: " << e.what() << '\n';
+        return 1;
     }
     return 0;
 }

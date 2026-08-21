@@ -48,7 +48,7 @@ namespace ig
 		template <typename T, int Dim>
 		class KD_Tree_Node
 		{
-			typedef TinyVector<T, Dim> Vector;
+			using Vector = TinyVector<T, Dim>;
 
 		public:
 
@@ -100,8 +100,8 @@ namespace ig
 	class KD_Tree
 	{
 	public:
-		typedef T Real;
-		typedef TinyVector<T, Dim> Vector;
+		using Real   = T;
+		using Vector = TinyVector<T, Dim>;
 		KD_Tree(const std::vector<Vector>& vertex_list, const std::vector<ptrdiff_t>& face_id_list);
 		KD_Tree(const std::vector<Vector>& vertex_list);
 		~KD_Tree();

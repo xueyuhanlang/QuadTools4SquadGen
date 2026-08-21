@@ -8,7 +8,7 @@
 
 int main(int argc, char **argv)
 {
-    MeshLib::Mesh3D<double> *mesh = 0;
+    MeshLib::Mesh3D<double> *mesh = nullptr;
     try
     {
         cxxopts::Options options("QuadExtraction", "QuadExtraction (author: Yang Liu, Email: yangliu@microsoft.com)");
@@ -16,31 +16,31 @@ int main(int argc, char **argv)
             .positional_help("[optional args]")
             .show_positional_help()
             // .allow_unrecognised_options()
-            .add_options()                                                                    //
-            ("i,input", "input filename (*.obj;*.off;*.ply)", cxxopts::value<std::string>())  //
-            ("f,feature", "feature input (*.npz)", cxxopts::value<std::string>())             //
-            ("o,output", "extracted mesh (*.obj;*.off;*.ply)", cxxopts::value<std::string>()) //
-            ("t,threshold", "threshold for color binarization", cxxopts::value<float>()->default_value("0.1")) // for noise data, use a smaller value to get better result
-            ("s,subdiv", "subdiv num", cxxopts::value<unsigned int>()->default_value("0"))                     //
-            ("r,smooth", "smooth num", cxxopts::value<unsigned int>()->default_value("0"))                     //
-            ("a,sharpangle", "sharp feature angle in degree", cxxopts::value<float>()->default_value("150"))   //
-            ("d,debug", "debug mode", cxxopts::value<bool>()->default_value("false"))                          //
-            ("m,method", "cdf, dcdf, cdfdcdf, all", cxxopts::value<std::string>()->default_value("cdfdcdf"))   //
+            .add_options()                                                                                                             //
+            ("i,input", "input filename (*.obj;*.off;*.ply)", cxxopts::value<std::string>())                                           //
+            ("f,feature", "feature input (*.npz)", cxxopts::value<std::string>())                                                      //
+            ("o,output", "extracted mesh (*.obj;*.off;*.ply)", cxxopts::value<std::string>())                                          //
+            ("t,threshold", "threshold for color binarization", cxxopts::value<float>()->default_value("0.1"))                         // for noise data, use a smaller value to get better result
+            ("s,subdiv", "subdiv num", cxxopts::value<unsigned int>()->default_value("0"))                                             //
+            ("r,smooth", "smooth num", cxxopts::value<unsigned int>()->default_value("0"))                                             //
+            ("a,sharpangle", "sharp feature angle in degree", cxxopts::value<float>()->default_value("150"))                           //
+            ("d,debug", "debug mode", cxxopts::value<bool>()->default_value("false"))                                                  //
+            ("m,method", "cdf, dcdf, cdfdcdf, all", cxxopts::value<std::string>()->default_value("cdfdcdf"))                           //
             ("ringsize", "ring size for color enhancement", cxxopts::value<int>()->default_value("10"))                                //
             ("c,collasperatio", "edge collapse ratio", cxxopts::value<float>()->default_value("0.05"))                                 //
             ("collasenormalthreshold", "edge collapse normal angle threshold in degree", cxxopts::value<float>()->default_value("20")) //
-            ("n,normalize", "normalize the input mesh", cxxopts::value<bool>()->default_value("false"))                                 //
+            ("n,normalize", "normalize the input mesh", cxxopts::value<bool>()->default_value("false"))                                //
             ("improve", "improve quad numbers", cxxopts::value<bool>()->default_value("false"))                                        //
-            ("v,verbose", "verbose output", cxxopts::value<bool>()->default_value("true"))  //
-            ("div", "color pattern division", cxxopts::value<int>()->default_value("0"))    //
-            ("u,useqcdf2", "use QCDF code", cxxopts::value<bool>()->default_value("false")) //
+            ("v,verbose", "verbose output", cxxopts::value<bool>()->default_value("true"))                                             //
+            ("div", "color pattern division", cxxopts::value<int>()->default_value("0"))                                               //
+            ("u,useqcdf2", "use QCDF code", cxxopts::value<bool>()->default_value("false"))                                            //
             ("h,help", "Print help");
 
         auto result = options.parse(argc, argv);
         if (result.count("help"))
         {
-            std::cout << options.help({"", "Group"}) << std::endl;
-            exit(0);
+            std::cout << options.help({"", "Group"}) << '\n';
+            return 0;
         }
 
         if (result.count("i"))
@@ -49,15 +49,15 @@ int main(int argc, char **argv)
 
             if (!std::filesystem::exists(inputfile))
             {
-                std::cout << "The input file does not exist!" << std::endl;
-                exit(0);
+                std::cout << "The input file does not exist!\n";
+                return 1;
             }
 
             mesh = load_mesh<double>(inputfile);
             if (!mesh)
             {
-                std::cout << "The input file " << inputfile << "is loaded incorrectly(non - manifold)!" << std::endl;
-                exit(0);
+                std::cout << "The input file " << inputfile << " is loaded incorrectly (non-manifold)!\n";
+                return 1;
             }
 
             std::string featurefile;
@@ -80,7 +80,9 @@ int main(int argc, char **argv)
                 std::cout << "No feature file!" << std::endl;
                 throw std::invalid_argument("No feature file!");
             }
-            std::string outputfilename = result.count("o") ? result["o"].as<std::string>() : featurefile.substr(0, featurefile.find_last_of(".")) + "_quad.ply";
+            std::string outputfilename = result.count("o")
+                                             ? result["o"].as<std::string>()
+                                             : (std::filesystem::path(featurefile).parent_path() / (std::filesystem::path(featurefile).stem().string() + "_quad.ply")).string();
             std::string outputdir = GetFileDirectory(outputfilename);
             if (!outputdir.empty() && !std::filesystem::exists(outputdir))
             {
@@ -139,11 +141,13 @@ int main(int argc, char **argv)
                     }
                     if (method == "all")
                     {
-                        std::string cdf_outputfilename = outputfilename.substr(0, outputfilename.find_last_of(".")) + "_cdf.ply";
+                        const auto stem = std::filesystem::path(outputfilename).parent_path() / std::filesystem::path(outputfilename).stem();
+                        const std::string stem_str = stem.string();
+                        std::string cdf_outputfilename = stem_str + "_cdf.ply";
                         qcdf2quadextractor.export_mesh(FaceClusterType::FC_CDF, cdf_outputfilename);
-                        std::string dcdf_outputfilename = outputfilename.substr(0, outputfilename.find_last_of(".")) + "_dcdf.ply";
+                        std::string dcdf_outputfilename = stem_str + "_dcdf.ply";
                         qcdf2quadextractor.export_mesh(FaceClusterType::FC_DCDF, dcdf_outputfilename);
-                        std::string cdfdcdf_outputfilename = outputfilename.substr(0, outputfilename.find_last_of(".")) + "_cdfdcdf.ply";
+                        std::string cdfdcdf_outputfilename = stem_str + "_cdfdcdf.ply";
                         qcdf2quadextractor.export_mesh(FaceClusterType::FC_CDF_DCDF, cdfdcdf_outputfilename);
                     }
                     else

@@ -12,7 +12,7 @@
 template <typename Real>
 Real compute_angle(const Real dot_product_value)
 {
-    return std::acos(std::min((Real)1, std::max(-(Real)1, dot_product_value))) * 180 / (Real)M_PI;
+    return std::acos(std::min(static_cast<Real>(1), std::max(static_cast<Real>(-1), dot_product_value))) * 180 / static_cast<Real>(M_PI);
 }
 
 template <typename Real>
@@ -37,8 +37,8 @@ Real compute_dihedral_angle(MeshLib::HE_edge<Real> *edge)
 {
     auto face0 = edge->face;
     auto face1 = edge->pair->face;
-    if (face0 == 0 || face1 == 0)
-        return 0;
+    if (face0 == nullptr || face1 == nullptr)
+        return Real{0};
     auto b0 = edge->vert->pos - edge->pair->vert->pos;
     b0.Normalize();
     auto b1 = face0->GetCentroid() - edge->pair->vert->pos;
@@ -53,8 +53,8 @@ Real compute_dihedral_angle_diag02(const TinyVector<Real, 3> &v0, const TinyVect
 {
     auto b0 = v2 - v0;
     b0.Normalize();
-    auto face023_centroid = (v0 + v2 + v3) / (Real)3.0;
-    auto face012_centroid = (v0 + v1 + v2) / (Real)3.0;
+    auto face023_centroid = (v0 + v2 + v3) / static_cast<Real>(3.0);
+    auto face012_centroid = (v0 + v1 + v2) / static_cast<Real>(3.0);
     auto b1 = face023_centroid - v0;
     auto b2 = face012_centroid - v0;
     b1 -= b1.Dot(b0) * b0, b1.Normalize();
@@ -115,8 +115,8 @@ Real quad_regularity(const TinyVector<Real, 3> &v0, const TinyVector<Real, 3> &v
     angle[2] = compute_angle(v1, v2, v3);
     angle[3] = compute_angle(v2, v3, v0);
     Real sum = 0;
-    for (int j = 0; j < 4; j++)
-        sum += fabs(angle[j] - 90);
+    for (const auto angle_value : angle)
+        sum += fabs(angle_value - 90);
     return sum;
 };
 //////////////////////////////////////////////////////////////////////////
@@ -128,12 +128,12 @@ void compute_statistics(const std::vector<Real> &data, Real &avg_v, Real &max_v,
         avg_v = max_v = var_v = 0;
         return;
     }
-    avg_v = std::accumulate(data.begin(), data.end(), 0.0) / data.size();
+    avg_v = std::accumulate(data.begin(), data.end(), Real{0}) / data.size();
     max_v = *std::max_element(data.begin(), data.end());
-    var_v = 0;
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)data.size(); i++)
+    var_v = Real{0};
+    for (const auto value : data)
     {
-        var_v += (data[i] - avg_v) * (data[i] - avg_v);
+        var_v += (value - avg_v) * (value - avg_v);
     }
     var_v = std::sqrt(var_v / data.size());
 };
@@ -145,9 +145,9 @@ void FittingPlane(const std::vector<TinyVector<Real, 3>> &points, const bool clo
     if (points.size() < 3)
         return;
     TinyVector<Real, 3> cen(0, 0, 0);
-    for (size_t i = 0; i < points.size(); i++)
-        cen += points[i];
-    line_origin = cen / (Real)points.size();
+    for (const auto &point : points)
+        cen += point;
+    line_origin = cen / static_cast<Real>(points.size());
 
     if (points.size() == 3)
     {
@@ -156,7 +156,8 @@ void FittingPlane(const std::vector<TinyVector<Real, 3>> &points, const bool clo
     }
     TinyVector<Real, 3> N(0, 0, 0);
 
-    for (size_t i = 0; i < (closed ? points.size() - 1 : points.size()); i++)
+    const auto point_count = closed ? points.size() - 1 : points.size();
+    for (size_t i = 0; i < point_count; ++i)
         N += points[i].Cross(points[(i + 1) % points.size()]);
     N.Normalize();
     line_direction = N;
@@ -167,7 +168,7 @@ void get_meshinfo(MeshLib::Mesh3D<Real> *mesh,
                   MySortedTuple<ptrdiff_t, 11, false> &info_tuple,
                   TinyVector<Real, 3> &size, bool apply_transformation)
 {
-    if (mesh == 0)
+    if (mesh == nullptr)
         return;
 
     auto nv = mesh->get_num_of_vertices();
@@ -181,36 +182,36 @@ void get_meshinfo(MeshLib::Mesh3D<Real> *mesh,
     ptrdiff_t num_interior_degree_3_verts = 0;
     ptrdiff_t num_interior_degree_5_verts = 0;
     ptrdiff_t num_boundary_degree_2_verts = 0;
-    for (auto i = 0; i < nv; i++)
+    for (ptrdiff_t i = 0; i < nv; ++i)
     {
         auto vert = mesh->get_vertex(i);
         bool boundary = mesh->is_on_boundary(vert);
         if (boundary)
         {
-            num_boundary_verts++;
+            ++num_boundary_verts;
             if (vert->degree == 2)
             {
-                num_boundary_degree_2_verts++;
-                num_boundary_singular_verts++;
+                ++num_boundary_degree_2_verts;
+                ++num_boundary_singular_verts;
             }
             else if (vert->degree > 3)
             {
-                num_boundary_singular_verts++;
+                ++num_boundary_singular_verts;
             }
         }
         else
         {
             if (vert->degree != 4)
             {
-                num_interior_singular_verts++;
+                ++num_interior_singular_verts;
             }
             else if (vert->degree == 3)
             {
-                num_interior_degree_3_verts++;
+                ++num_interior_degree_3_verts;
             }
             else if (vert->degree == 5)
             {
-                num_interior_degree_5_verts++;
+                ++num_interior_degree_5_verts;
             }
         }
     }
@@ -238,11 +239,11 @@ void get_meshinfo(MeshLib::Mesh3D<Real> *mesh,
         x += vert->pos[0], y += vert->pos[1], z += vert->pos[2];
     }
     TinyVector<Real, 3> normalization_center(x, y, z);
-    normalization_center /= (Real)mesh->get_num_of_vertices();
+    normalization_center /= static_cast<Real>(mesh->get_num_of_vertices());
 
     Real a00 = 0, a01 = 0, a02 = 0, a11 = 0, a12 = 0, a22 = 0;
 #pragma omp parallel for reduction(+ : a00, a01, a02, a11, a12, a22)
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)mesh->get_num_of_vertices(); i++)
+    for (ptrdiff_t i = 0; i < mesh->get_num_of_vertices(); ++i)
     {
         auto p = mesh->get_vertex(i)->pos - normalization_center;
         a00 += p[0] * p[0];
@@ -287,7 +288,7 @@ void get_meshinfo(MeshLib::Mesh3D<Real> *mesh,
 
     if (T2.Dot(T0.Cross(T1)) < 0)
     {
-        T2 *= (Real)-1;
+        T2 *= static_cast<Real>(-1);
     }
 
     TinyVector<Real, 3> FaceCenter(0, 0, 0);
@@ -305,18 +306,18 @@ void get_meshinfo(MeshLib::Mesh3D<Real> *mesh,
     auto dir = FaceCenter - normalization_center;
     if (dir.Dot(T0) < 0)
     {
-        T0 *= (Real)-1;
+        T0 *= static_cast<Real>(-1);
         if (T1.Dot(dir) < 0)
-            T1 *= (Real)-1;
+            T1 *= static_cast<Real>(-1);
         else
-            T2 *= (Real)-1;
+            T2 *= static_cast<Real>(-1);
     }
     else
     {
         if (T1.Dot(dir) < 0)
         {
-            T1 *= (Real)-1;
-            T2 *= (Real)-1;
+            T1 *= static_cast<Real>(-1);
+            T2 *= static_cast<Real>(-1);
         }
     }
 
@@ -341,7 +342,7 @@ void get_meshinfo(MeshLib::Mesh3D<Real> *mesh,
             right_upper_corner[2] = std::max(right_upper_corner[2], pos[2]);
         }
     }
-    Real scale = 1.0 / (std::max(std::max(right_upper_corner[0] - left_lower_corner[0], right_upper_corner[1] - left_lower_corner[1]), right_upper_corner[2] - left_lower_corner[2]) + (Real)1.0e-10);
+    Real scale = 1.0 / (std::max(std::max(right_upper_corner[0] - left_lower_corner[0], right_upper_corner[1] - left_lower_corner[1]), right_upper_corner[2] - left_lower_corner[2]) + static_cast<Real>(1.0e-10));
     left_lower_corner *= scale;
     right_upper_corner *= scale;
     size = right_upper_corner - left_lower_corner;
@@ -366,7 +367,7 @@ void get_meshinfo(MeshLib::Mesh3D<Real> *mesh,
 template <typename Real>
 bool skip_quad_mesh(MeshLib::Mesh3D<Real> *quad_mesh, size_t &num_interior_singularities, size_t &num_boundary_singularities, Real &dangle_diff, int &max_boundary_degree, int &max_interior_degree, int &max_num_of_singular_vertices_in_face)
 {
-    if (quad_mesh == 0)
+    if (quad_mesh == nullptr)
         return true;
 
     max_boundary_degree = max_interior_degree = max_num_of_singular_vertices_in_face = 0;
@@ -387,16 +388,16 @@ bool skip_quad_mesh(MeshLib::Mesh3D<Real> *quad_mesh, size_t &num_interior_singu
         if (boundary_vertex_tags[i])
         {
             if (singularity_tags[i])
-                num_boundary_singularities++;
+                ++num_boundary_singularities;
             has_boundary_singularies |= singularity_tags[i];
-            max_boundary_degree = std::max(max_boundary_degree, (int)hv->degree);
+            max_boundary_degree = std::max(max_boundary_degree, static_cast<int>(hv->degree));
         }
         else
         {
             if (singularity_tags[i])
-                num_interior_singularities++;
+                ++num_interior_singularities;
             has_interior_singularies |= singularity_tags[i];
-            max_interior_degree = std::max(max_interior_degree, (int)hv->degree);
+            max_interior_degree = std::max(max_interior_degree, static_cast<int>(hv->degree));
         }
     }
     // if (boundary_max_degree > 3)

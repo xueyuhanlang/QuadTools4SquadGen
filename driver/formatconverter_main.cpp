@@ -24,8 +24,8 @@ int main(int argc, char **argv)
         auto result = options.parse(argc, argv);
         if (result.count("help"))
         {
-            std::cout << options.help({"", "Group"}) << std::endl;
-            exit(0);
+            std::cout << options.help({"", "Group"}) << '\n';
+            return 0;
         }
 
         if (result.count("i") && result.count("o"))
@@ -35,24 +35,24 @@ int main(int argc, char **argv)
 
             if (!std::filesystem::exists(inputfile))
             {
-                std::cout << "The input file does not exist!" << std::endl;
-                exit(0);
+                std::cout << "The input file does not exist!\n";
+                return 1;
             }
 
             const char *supported_input_formats = "ply, off, obj, stl, glb, gltf, vtk, vtp, wrl, fbx";
             const char *supported_output_formats = "ply, off, obj, stl, glb, gltf, vtk, vtp, usd, wrl, x3d";
             if (inputext.empty() || std::string::npos == std::string(supported_input_formats).find(inputext))
             {
-                std::cout << "The input file format is not supported! Supported formats are: " << supported_input_formats << std::endl;
-                exit(0);
+                std::cout << "The input file format is not supported! Supported formats are: " << supported_input_formats << '\n';
+                return 1;
             }
 
             auto outputfile = result["o"].as<std::string>();
             auto outputext = GetFileExtension(outputfile);
             if (outputext.empty() || std::string::npos == std::string(supported_output_formats).find(outputext))
             {
-                std::cout << "The output file format is not supported! Supported formats are: " << supported_output_formats << std::endl;
-                exit(0);
+                std::cout << "The output file format is not supported! Supported formats are: " << supported_output_formats << '\n';
+                return 1;
             }
 
             auto outputdir = GetFileDirectory(outputfile);
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
                             break;
                         }
                     }
-                    merged_face_indices.push_back(merged_face);
+                    merged_face_indices.emplace_back(std::move(merged_face));
                 }
                 face_indices = merged_face_indices;
             }
@@ -106,14 +106,14 @@ int main(int argc, char **argv)
         }
         else
         {
-            std::cout << "No input file!" << std::endl;
-            exit(0);
+            std::cout << "No input file!\n";
+            return 1;
         }
     }
     catch (const cxxopts::exceptions::exception &e)
     {
-        std::cout << "Error parsing options: " << e.what() << std::endl;
-        exit(0);
+        std::cout << "Error parsing options: " << e.what() << '\n';
+        return 1;
     }
     return 0;
 }

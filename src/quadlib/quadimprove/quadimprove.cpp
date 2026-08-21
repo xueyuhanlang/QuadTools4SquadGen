@@ -32,17 +32,17 @@ bool QuadImprove<Real>::improve_mesh()
 
     for (size_t v = 0; v < vertices.size(); v++)
     {
-        auto vh = polymesh.add_vertex(OpenMesh::Vec3f((float)vertices[v][0], (float)vertices[v][1], (float)vertices[v][2]));
+        auto vh = polymesh.add_vertex(OpenMesh::Vec3f(static_cast<float>(vertices[v][0]), static_cast<float>(vertices[v][1]), static_cast<float>(vertices[v][2])));
         polymesh.property(v_id_tag, vh) = v;
     }
     std::vector<PolyMesh::VertexHandle> face_vertices;
     face_vertices.reserve(8);
     for (const auto &f : facets)
     {
-        face_vertices.resize(0);
+        face_vertices.clear();
         for (const auto &vid : f)
         {
-            face_vertices.push_back(PolyMesh::VertexHandle((int)vid));
+            face_vertices.emplace_back(static_cast<int>(vid));
         }
         polymesh.add_face(face_vertices);
     }
@@ -128,7 +128,7 @@ bool QuadImprove<Real>::improve_mesh()
     polymesh.garbage_collection();
 
     std::vector<size_t> old_to_new_vertex_map;
-    old_to_new_vertex_map.resize(polymesh.n_vertices(), (size_t)(-1));
+    old_to_new_vertex_map.resize(polymesh.n_vertices(), static_cast<size_t>(-1));
     size_t new_vid = 0;
     for (auto v_it = polymesh.vertices_begin(); v_it != polymesh.vertices_end(); ++v_it)
     {
@@ -143,13 +143,13 @@ bool QuadImprove<Real>::improve_mesh()
         {
             size_t vid = old_to_new_vertex_map[polymesh.property(v_id_tag, *v_it)];
             auto point = polymesh.point(*v_it);
-            vertices[vid][0] = (Real)point[0];
-            vertices[vid][1] = (Real)point[1];
-            vertices[vid][2] = (Real)point[2];
+            vertices[vid][0] = static_cast<Real>(point[0]);
+            vertices[vid][1] = static_cast<Real>(point[1]);
+            vertices[vid][2] = static_cast<Real>(point[2]);
         }
     }
 
-    facets.resize(0);
+    facets.clear();
     for (auto f_it = polymesh.faces_begin(); f_it != polymesh.faces_end(); ++f_it)
     {
         std::vector<size_t> face;

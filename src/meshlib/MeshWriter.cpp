@@ -13,34 +13,6 @@
 //////////////////////////////////////////////////////////////////////////
 std::array<unsigned char, 3> hsvToRgb(float h, float s, float v)
 {
-    // float r, g, b;
-    // int i = int(h * 6);
-    // float f = h * 6 - i;
-    // float p = v * (1 - s);
-    // float q = v * (1 - f * s);
-    // float t = v * (1 - (1 - f) * s);
-    // switch (i % 6)
-    // {
-    // case 0:
-    //     r = v, g = t, b = p;
-    //     break;
-    // case 1:
-    //     r = q, g = v, b = p;
-    //     break;
-    // case 2:
-    //     r = p, g = v, b = t;
-    //     break;
-    // case 3:
-    //     r = p, g = q, b = v;
-    //     break;
-    // case 4:
-    //     r = t, g = p, b = v;
-    //     break;
-    // case 5:
-    //     r = v, g = p, b = q;
-    //     break;
-    // }
-    // return std::array<unsigned char, 3>({(unsigned char)(r * 255), (unsigned char)(g * 255), (unsigned char)(b * 255)});
     const float c = v * s;
     const float x = c * (1.0f - std::abs(std::fmod(h * 6.0f, 2.0f) - 1.0f));
     const float m = v - c;
@@ -84,9 +56,9 @@ std::array<unsigned char, 3> hsvToRgb(float h, float s, float v)
         b = x;
     }
 
-    return std::array<unsigned char, 3>({(unsigned char)((r + m) * 255),
-                                         (unsigned char)((g + m) * 255),
-                                         (unsigned char)((b + m) * 255)});
+    return std::array<unsigned char, 3>({static_cast<unsigned char>((r + m) * 255.0f),
+                                         static_cast<unsigned char>((g + m) * 255.0f),
+                                         static_cast<unsigned char>((b + m) * 255.0f)});
 }
 std::vector<std::array<unsigned char, 3>> generateDistinctColors(int n)
 {
@@ -122,20 +94,22 @@ void SavePLYmesh_with_float_storage(MeshLib::Mesh3D<Real> *m_pmesh, const std::s
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_vertices(); i++)
     {
         auto v = m_pmesh->get_vertex(i);
-        vertexX[i] = (float)(v->pos[0]), vertexY[i] = (float)(v->pos[1]), vertexZ[i] = (float)(v->pos[2]);
+        vertexX[i] = static_cast<float>(v->pos[0]), vertexY[i] = static_cast<float>(v->pos[1]), vertexZ[i] = static_cast<float>(v->pos[2]);
     }
     std::vector<std::vector<size_t>> faceIndices;
+    faceIndices.reserve(m_pmesh->get_num_of_faces());
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_faces(); i++)
     {
         auto f = m_pmesh->get_face(i);
         auto he = f->edge;
         std::vector<size_t> vertex_list;
+        vertex_list.reserve(f->valence);
         do
         {
-            vertex_list.push_back((size_t)he->vert->id);
+            vertex_list.emplace_back(static_cast<size_t>(he->vert->id));
             he = he->next;
         } while (he != f->edge);
-        faceIndices.push_back(vertex_list);
+        faceIndices.emplace_back(vertex_list);
     }
 
     std::vector<std::array<unsigned char, 3>> ply_face_color;
@@ -144,11 +118,11 @@ void SavePLYmesh_with_float_storage(MeshLib::Mesh3D<Real> *m_pmesh, const std::s
         if (!use_coloring_algorithm)
         {
             auto max_cluster_id = *std::max_element(face_cluster_ids->begin(), face_cluster_ids->end());
-            auto cluster_colors = generateDistinctColors((int)max_cluster_id + 1);
+            auto cluster_colors = generateDistinctColors(static_cast<int>(max_cluster_id) + 1);
             ply_face_color.reserve(m_pmesh->get_num_of_faces());
             for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_faces(); i++)
             {
-                ply_face_color.push_back(cluster_colors[(*face_cluster_ids)[i]]);
+                ply_face_color.emplace_back(cluster_colors[(*face_cluster_ids)[i]]);
             }
         }
         else
@@ -189,12 +163,12 @@ void SavePLYmesh_with_float_storage(MeshLib::Mesh3D<Real> *m_pmesh, const std::s
                     complex_color[colored_vertices[i][j]] = i;
                 }
             }
-            auto cluster_colors = generateDistinctColors((int)colored_vertices.size());
+            auto cluster_colors = generateDistinctColors(static_cast<int>(colored_vertices.size()));
 
             ply_face_color.reserve(m_pmesh->get_num_of_faces());
             for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_faces(); i++)
             {
-                ply_face_color.push_back(cluster_colors[complex_color[(*face_cluster_ids)[i]]]);
+                ply_face_color.emplace_back(cluster_colors[complex_color[(*face_cluster_ids)[i]]]);
             }
         }
     }
@@ -225,50 +199,6 @@ void SaveChartEdge_as_ply(MeshLib::Mesh3D<Real> *m_pmesh, const std::string &fil
             marked_edge_tag[edge->id] = marked_edge_tag[edge->pair->id] = true;
     }
     SaveMarkedEdge_as_ply(m_pmesh, filename, marked_edge_tag, normaloffset);
-    // std::vector<float> vertexX, vertexY, vertexZ;
-    // std::vector<ptrdiff_t> vertex_used(m_pmesh->get_num_of_vertices(), -1);
-    // ptrdiff_t vertex_count = 0;
-    // std::vector<int> chart_edge_indices[2];
-    // for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); i++)
-    // {
-    //     auto edge = m_pmesh->get_edge(i);
-    //     if (edge < edge->pair && (m_pmesh->is_on_boundary(edge) || face_cluster_ids[edge->face->id] != face_cluster_ids[edge->pair->face->id]))
-    //     {
-    //         if (vertex_used[edge->vert->id] >= 0)
-    //         {
-    //             chart_edge_indices[0].emplace_back(vertex_used[edge->vert->id]);
-    //         }
-    //         else
-    //         {
-    //             vertexX.emplace_back((float)edge->vert->pos[0] + normaloffset * (float)edge->vert->normal[0]);
-    //             vertexY.emplace_back((float)edge->vert->pos[1] + normaloffset * (float)edge->vert->normal[1]);
-    //             vertexZ.emplace_back((float)edge->vert->pos[2] + normaloffset * (float)edge->vert->normal[2]);
-    //             chart_edge_indices[0].emplace_back(vertex_count);
-    //             vertex_used[edge->vert->id] = vertex_count++;
-    //         }
-    //         if (vertex_used[edge->pair->vert->id] >= 0)
-    //         {
-    //             chart_edge_indices[1].emplace_back(vertex_used[edge->pair->vert->id]);
-    //         }
-    //         else
-    //         {
-    //             vertexX.emplace_back((float)edge->pair->vert->pos[0] + normaloffset * (float)edge->pair->vert->normal[0]);
-    //             vertexY.emplace_back((float)edge->pair->vert->pos[1] + normaloffset * (float)edge->pair->vert->normal[1]);
-    //             vertexZ.emplace_back((float)edge->pair->vert->pos[2] + normaloffset * (float)edge->pair->vert->normal[2]);
-    //             chart_edge_indices[1].emplace_back(vertex_count);
-    //             vertex_used[edge->pair->vert->id] = vertex_count++;
-    //         }
-    //     }
-    // }
-    // happly::PLYData plyOut;
-    // plyOut.addElement("vertex", vertexX.size());
-    // plyOut.getElement("vertex").addProperty<float>("x", vertexX);
-    // plyOut.getElement("vertex").addProperty<float>("y", vertexY);
-    // plyOut.getElement("vertex").addProperty<float>("z", vertexZ);
-    // plyOut.addElement("edge", chart_edge_indices[0].size());
-    // plyOut.getElement("edge").addProperty<int>("vertex1", chart_edge_indices[0]);
-    // plyOut.getElement("edge").addProperty<int>("vertex2", chart_edge_indices[1]);
-    // plyOut.write(filename, happly::DataFormat::Binary);
 }
 //////////////////////////////////////////////////////////////////////////
 template <typename Real>
@@ -287,14 +217,17 @@ void SaveMarkedEdge_as_ply(MeshLib::Mesh3D<Real> *m_pmesh, const std::string &fi
     }
     std::vector<float> vertexX, vertexY, vertexZ;
     ptrdiff_t vcount = 0;
+    vertexX.reserve(m_pmesh->get_num_of_vertices());
+    vertexY.reserve(m_pmesh->get_num_of_vertices());
+    vertexZ.reserve(m_pmesh->get_num_of_vertices());
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_vertices(); i++)
     {
         auto vert = m_pmesh->get_vertex(i);
         if (vertex_tag[vert->id] == false)
             continue;
-        vertexX.emplace_back((float)vert->pos[0] + normaloffset * (float)vert->normal[0]);
-        vertexY.emplace_back((float)vert->pos[1] + normaloffset * (float)vert->normal[1]);
-        vertexZ.emplace_back((float)vert->pos[2] + normaloffset * (float)vert->normal[2]);
+        vertexX.emplace_back(static_cast<float>(vert->pos[0]) + normaloffset * static_cast<float>(vert->normal[0]));
+        vertexY.emplace_back(static_cast<float>(vert->pos[1]) + normaloffset * static_cast<float>(vert->normal[1]));
+        vertexZ.emplace_back(static_cast<float>(vert->pos[2]) + normaloffset * static_cast<float>(vert->normal[2]));
         vertex_id_map[vert->id] = vcount++;
     }
     std::vector<int> chart_edge_indices[2];
@@ -304,8 +237,8 @@ void SaveMarkedEdge_as_ply(MeshLib::Mesh3D<Real> *m_pmesh, const std::string &fi
         if (edge > edge->pair || marked_edge_tag[edge->id] == false)
             continue;
         auto v0 = edge->vert, v1 = edge->pair->vert;
-        chart_edge_indices[0].emplace_back((int)vertex_id_map[v0->id]);
-        chart_edge_indices[1].emplace_back((int)vertex_id_map[v1->id]);
+        chart_edge_indices[0].emplace_back(static_cast<int>(vertex_id_map[v0->id]));
+        chart_edge_indices[1].emplace_back(static_cast<int>(vertex_id_map[v1->id]));
     }
     happly::PLYData plyOut;
     plyOut.addElement("vertex", vertexX.size());
@@ -323,18 +256,18 @@ void SaveEdge_as_ply(const std::string &filename, const std::vector<TinyVector<R
 {
     std::vector<float> vertexX(vertices.size()), vertexY(vertices.size()), vertexZ(vertices.size());
 #pragma omp parallel for
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)vertices.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(vertices.size()); i++)
     {
-        vertexX[i] = (float)vertices[i][0];
-        vertexY[i] = (float)vertices[i][1];
-        vertexZ[i] = (float)vertices[i][2];
+        vertexX[i] = static_cast<float>(vertices[i][0]);
+        vertexY[i] = static_cast<float>(vertices[i][1]);
+        vertexZ[i] = static_cast<float>(vertices[i][2]);
     }
     std::vector<int> chart_edge_indices[2];
     chart_edge_indices[0].resize(edges.size()), chart_edge_indices[1].resize(edges.size());
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)edges.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(edges.size()); i++)
     {
-        chart_edge_indices[0][i] = (int)edges[i].first;
-        chart_edge_indices[1][i] = (int)edges[i].second;
+        chart_edge_indices[0][i] = static_cast<int>(edges[i].first);
+        chart_edge_indices[1][i] = static_cast<int>(edges[i].second);
     }
     happly::PLYData plyOut;
     plyOut.addElement("vertex", vertexX.size());
@@ -351,21 +284,21 @@ void SaveEdge_as_ply(const std::string &filename, const std::vector<MeshLib::HE_
 {
     std::vector<float> vertexX(2 * edges.size()), vertexY(2 * edges.size()), vertexZ(2 * edges.size());
 #pragma omp parallel for
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)edges.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(edges.size()); i++)
     {
-        vertexX[2 * i] = (float)edges[i]->pair->vert->pos[0];
-        vertexY[2 * i] = (float)edges[i]->pair->vert->pos[1];
-        vertexZ[2 * i] = (float)edges[i]->pair->vert->pos[2];
-        vertexX[2 * i + 1] = (float)edges[i]->vert->pos[0];
-        vertexY[2 * i + 1] = (float)edges[i]->vert->pos[1];
-        vertexZ[2 * i + 1] = (float)edges[i]->vert->pos[2];
+        vertexX[2 * i] = static_cast<float>(edges[i]->pair->vert->pos[0]);
+        vertexY[2 * i] = static_cast<float>(edges[i]->pair->vert->pos[1]);
+        vertexZ[2 * i] = static_cast<float>(edges[i]->pair->vert->pos[2]);
+        vertexX[2 * i + 1] = static_cast<float>(edges[i]->vert->pos[0]);
+        vertexY[2 * i + 1] = static_cast<float>(edges[i]->vert->pos[1]);
+        vertexZ[2 * i + 1] = static_cast<float>(edges[i]->vert->pos[2]);
     }
     std::vector<int> chart_edge_indices[2];
     chart_edge_indices[0].resize(edges.size()), chart_edge_indices[1].resize(edges.size());
-    for (int i = 0; i < (int)edges.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(edges.size()); i++)
     {
-        chart_edge_indices[0][i] = 2 * i;
-        chart_edge_indices[1][i] = 2 * i + 1;
+        chart_edge_indices[0][i] = static_cast<int>(2 * i);
+        chart_edge_indices[1][i] = static_cast<int>(2 * i + 1);
     }
     happly::PLYData plyOut;
     plyOut.addElement("vertex", vertexX.size());
@@ -384,7 +317,7 @@ void SaveMeshlabMLP(const std::string &mlpfile, const std::string &meshfile, con
     std::ofstream mlp(mlpfile);
     if (!mlp.is_open())
     {
-        std::cerr << "Failed to open MLP file: " << mlpfile << std::endl;
+        std::cerr << "Failed to open MLP file: " << mlpfile << '\n';
         return;
     }
 
@@ -456,8 +389,8 @@ void SaveComponents(MeshLib::Mesh3D<Real> *m_pmesh, const std::string &filename)
                 he = he->next;
             } while (he != f->edge);
         }
-        Real quad_ratio = num_quads / (Real)num_totals;
-        if (quad_ratio < (Real)0.85 || num_quads < 20)
+        Real quad_ratio = num_quads / static_cast<Real>(num_totals);
+        if (quad_ratio < Real(0.85) || num_quads < 20)
             continue;
         std::string plyfilename = filename;
         size_t lastindex = plyfilename.find_last_of(".");
@@ -475,9 +408,9 @@ void save_component_as_ply(const std::vector<MeshLib::HE_face<Real> *> &componen
         return;
 
     std::unordered_map<MeshLib::HE_vert<Real> *, size_t> vert_map;
-    size_t num_verts = 0;
     std::vector<float> vertexX, vertexY, vertexZ;
     std::vector<std::vector<size_t>> faceIndices;
+    faceIndices.reserve(component.size());
     for (auto f : component)
     {
         auto he = f->edge;
@@ -486,9 +419,9 @@ void save_component_as_ply(const std::vector<MeshLib::HE_face<Real> *> &componen
             if (vert_map.find(he->vert) == vert_map.end())
             {
                 vert_map[he->vert] = vertexX.size();
-                vertexX.emplace_back((float)he->vert->pos[0]);
-                vertexY.emplace_back((float)he->vert->pos[1]);
-                vertexZ.emplace_back((float)he->vert->pos[2]);
+                vertexX.emplace_back(static_cast<float>(he->vert->pos[0]));
+                vertexY.emplace_back(static_cast<float>(he->vert->pos[1]));
+                vertexZ.emplace_back(static_cast<float>(he->vert->pos[2]));
             }
             he = he->next;
         } while (he != f->edge);
@@ -498,6 +431,7 @@ void save_component_as_ply(const std::vector<MeshLib::HE_face<Real> *> &componen
     {
         auto he = f->edge;
         std::vector<size_t> face;
+        face.reserve(f->valence);
         do
         {
             face.emplace_back(vert_map[he->vert]);
@@ -542,7 +476,7 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
         {
             char line[128];
             int len = snprintf(line, sizeof(line), "v %.16g %.16g %.16g\n",
-                               (double)vertex[0], (double)vertex[1], (double)vertex[2]);
+                               static_cast<double>(vertex[0]), static_cast<double>(vertex[1]), static_cast<double>(vertex[2]));
             vertexBuffer.append(line, len);
         }
         objfile.write(vertexBuffer.data(), vertexBuffer.size());
@@ -583,7 +517,7 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
         {
             char line[128];
             int len = snprintf(line, sizeof(line), "%.16g %.16g %.16g\n",
-                               (double)vertex[0], (double)vertex[1], (double)vertex[2]);
+                               static_cast<double>(vertex[0]), static_cast<double>(vertex[1]), static_cast<double>(vertex[2]));
             offfile.write(line, len);
         }
 
@@ -606,9 +540,9 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
     {
         std::vector<float> vertexX(vertices.size()), vertexY(vertices.size()), vertexZ(vertices.size());
 #pragma omp parallel for
-        for (ptrdiff_t i = 0; i < (ptrdiff_t)vertices.size(); i++)
+        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(vertices.size()); i++)
         {
-            vertexX[i] = (float)(vertices[i][0]), vertexY[i] = (float)(vertices[i][1]), vertexZ[i] = (float)(vertices[i][2]);
+            vertexX[i] = static_cast<float>(vertices[i][0]), vertexY[i] = static_cast<float>(vertices[i][1]), vertexZ[i] = static_cast<float>(vertices[i][2]);
         }
         happly::PLYData plyOut;
 
@@ -625,7 +559,7 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
         std::vector<float> my_vertices(3 * vertices.size());
         size_t nf = 0;
         std::vector<size_t> face_start_index(face_indices.size(), 0);
-        for (ptrdiff_t i = 0; i < (ptrdiff_t)face_indices.size() - 1; i++)
+        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(face_indices.size()) - 1; i++)
         {
             nf += face_indices[i].size() - 2;
             face_start_index[i + 1] = nf;
@@ -634,21 +568,21 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
         std::vector<uint32_t> my_indices(3 * nf);
 
 #pragma omp parallel for
-        for (ptrdiff_t i = 0; i < (ptrdiff_t)vertices.size(); i++)
+        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(vertices.size()); i++)
         {
-            my_vertices[3 * i] = (float)(vertices[i][0]);
-            my_vertices[3 * i + 1] = (float)(vertices[i][1]);
-            my_vertices[3 * i + 2] = (float)(vertices[i][2]);
+            my_vertices[3 * i] = static_cast<float>(vertices[i][0]);
+            my_vertices[3 * i + 1] = static_cast<float>(vertices[i][1]);
+            my_vertices[3 * i + 2] = static_cast<float>(vertices[i][2]);
         }
 #pragma omp parallel for
-        for (ptrdiff_t i = 0; i < (ptrdiff_t)face_indices.size(); i++)
+        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(face_indices.size()); i++)
         {
             auto start = face_start_index[i] * 3;
-            for (int j = 0; j < (int)face_indices[i].size() - 2; j++)
+            for (ptrdiff_t j = 0; j < static_cast<ptrdiff_t>(face_indices[i].size()) - 2; j++)
             {
-                my_indices[start + 3 * j] = (uint32_t)(face_indices[i][0]);
-                my_indices[start + 3 * j + 1] = (uint32_t)(face_indices[i][j + 1]);
-                my_indices[start + 3 * j + 2] = (uint32_t)(face_indices[i][j + 2]);
+                my_indices[start + 3 * j] = static_cast<uint32_t>(face_indices[i][0]);
+                my_indices[start + 3 * j + 1] = static_cast<uint32_t>(face_indices[i][j + 1]);
+                my_indices[start + 3 * j + 2] = static_cast<uint32_t>(face_indices[i][j + 2]);
             }
         }
 
@@ -729,21 +663,21 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
                 << "ASCII\n"
                 << "DATASET UNSTRUCTURED_GRID\n"
                 << "POINTS " << vertices.size() << " double\n";
-        for (auto i = 0; i < vertices.size(); i++)
-            vtkfile << std::scientific << vertices[i] << std::endl;
+        for (size_t i = 0; i < vertices.size(); ++i)
+            vtkfile << std::scientific << vertices[i] << '\n';
         size_t total_num_indices = 0;
-        for (auto i = 0; i < face_indices.size(); i++)
+        for (size_t i = 0; i < face_indices.size(); ++i)
             total_num_indices += face_indices[i].size() + 1;
-        vtkfile << "CELLS " << face_indices.size() << " " << total_num_indices << std::endl;
-        for (auto i = 0; i < face_indices.size(); i++)
+        vtkfile << "CELLS " << face_indices.size() << " " << total_num_indices << '\n';
+        for (size_t i = 0; i < face_indices.size(); ++i)
         {
             vtkfile << face_indices[i].size();
-            for (auto j : face_indices[i])
+            for (const auto j : face_indices[i])
                 vtkfile << " " << j;
-            vtkfile << std::endl;
+            vtkfile << '\n';
         }
-        vtkfile << "CELL_TYPES " << face_indices.size() << std::endl;
-        for (auto i = 0; i < face_indices.size(); i++)
+        vtkfile << "CELL_TYPES " << face_indices.size() << '\n';
+        for (size_t i = 0; i < face_indices.size(); ++i)
         {
             if (face_indices[i].size() == 3)
                 vtkfile << "5\n"; // VTK_TRIANGLE
@@ -763,23 +697,23 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
                 << "  <Piece NumberOfPoints=\"" << vertices.size() << "\" NumberOfPolys=\"" << face_indices.size() << "\">\n"
                 << "   <Points>\n"
                 << "    <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">\n";
-        for (auto i = 0; i < vertices.size(); i++)
+        for (size_t i = 0; i < vertices.size(); ++i)
             vtpfile << std::scientific << vertices[i] << " ";
         vtpfile << "\n"
                 << "    </DataArray>\n"
                 << "   </Points>\n"
                 << "   <Polys>\n"
                 << "    <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n";
-        for (auto i = 0; i < face_indices.size(); i++)
+        for (size_t i = 0; i < face_indices.size(); ++i)
         {
-            for (auto j : face_indices[i])
+            for (const auto j : face_indices[i])
                 vtpfile << j << " ";
         }
         vtpfile << "\n"
                 << "    </DataArray>\n"
                 << "    <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n";
         size_t offset = 0;
-        for (auto i = 0; i < face_indices.size(); i++)
+        for (size_t i = 0; i < face_indices.size(); ++i)
         {
             offset += face_indices[i].size();
             vtpfile << offset << " ";
@@ -794,53 +728,28 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
     }
     else if (ext == "stl")
     {
-        // std::ofstream stlfile(filename);
-        // stlfile << "solid mesh\n";
-        // for (auto i = 0; i < face_indices.size(); i++)
-        // {
-        //     if (face_indices[i].size() < 3)
-        //         continue;
-        //     TinyVector<Real, 3> v0 = vertices[face_indices[i][0]];
-        //     for (auto j = 1; j < face_indices[i].size() - 1; j++)
-        //     {
-        //         TinyVector<Real, 3> v1 = vertices[face_indices[i][j]];
-        //         TinyVector<Real, 3> v2 = vertices[face_indices[i][j + 1]];
-        //         TinyVector<Real, 3> normal = (v1 - v0).UnitCross(v2 - v0);
-        //         stlfile << " facet normal " << normal << "\n";
-        //         stlfile << "  outer loop\n";
-        //         stlfile << "   vertex " << std::scientific << v0 << "\n";
-        //         stlfile << "   vertex " << std::scientific << v1 << "\n";
-        //         stlfile << "   vertex " << std::scientific << v2 << "\n";
-        //         stlfile << "  endloop\n";
-        //         stlfile << " endfacet\n";
-        //     }
-        // }
-        // stlfile << "endsolid mesh\n";
-        // stlfile.close();
-
-        // binary STL writing
         std::ofstream bstlfile(filename, std::ios::binary);
         char header[80] = "Binary STL generated by QuadTools";
         bstlfile.write(header, 80);
         uint32_t num_triangles = 0;
-        for (auto i = 0; i < face_indices.size(); i++)
-            num_triangles += (uint32_t)(face_indices[i].size() - 2);
+        for (size_t i = 0; i < face_indices.size(); ++i)
+            num_triangles += static_cast<uint32_t>(face_indices[i].size() - 2);
         bstlfile.write(reinterpret_cast<const char *>(&num_triangles), 4);
-        for (auto i = 0; i < face_indices.size(); i++)
+        for (size_t i = 0; i < face_indices.size(); ++i)
         {
             if (face_indices[i].size() < 3)
                 continue;
             TinyVector<Real, 3> v0 = vertices[face_indices[i][0]];
-            for (auto j = 1; j < face_indices[i].size() - 1; j++)
+            for (size_t j = 1; j < face_indices[i].size() - 1; ++j)
             {
                 TinyVector<Real, 3> v1 = vertices[face_indices[i][j]];
                 TinyVector<Real, 3> v2 = vertices[face_indices[i][j + 1]];
                 TinyVector<Real, 3> normal = (v1 - v0).UnitCross(v2 - v0);
-                float normal_f[3] = {(float)normal[0], (float)normal[1], (float)normal[2]};
+                float normal_f[3] = {static_cast<float>(normal[0]), static_cast<float>(normal[1]), static_cast<float>(normal[2])};
                 bstlfile.write(reinterpret_cast<const char *>(normal_f), 12);
-                float v0_f[3] = {(float)v0[0], (float)v0[1], (float)v0[2]};
-                float v1_f[3] = {(float)v1[0], (float)v1[1], (float)v1[2]};
-                float v2_f[3] = {(float)v2[0], (float)v2[1], (float)v2[2]};
+                float v0_f[3] = {static_cast<float>(v0[0]), static_cast<float>(v0[1]), static_cast<float>(v0[2])};
+                float v1_f[3] = {static_cast<float>(v1[0]), static_cast<float>(v1[1]), static_cast<float>(v1[2])};
+                float v2_f[3] = {static_cast<float>(v2[0]), static_cast<float>(v2[1]), static_cast<float>(v2[2])};
                 bstlfile.write(reinterpret_cast<const char *>(v0_f), 12);
                 bstlfile.write(reinterpret_cast<const char *>(v1_f), 12);
                 bstlfile.write(reinterpret_cast<const char *>(v2_f), 12);
@@ -861,7 +770,7 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
                 << "def Mesh \"Mesh\"\n"
                 << "{\n";
         usdfile << "    int[] faceVertexCounts = [";
-        for (auto i = 0; i < face_indices.size(); i++)
+        for (size_t i = 0; i < face_indices.size(); ++i)
         {
             usdfile << face_indices[i].size();
             if (i != face_indices.size() - 1)
@@ -869,9 +778,9 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
         }
         usdfile << "]\n";
         usdfile << "    int[] faceVertexIndices = [";
-        for (auto i = 0; i < face_indices.size(); i++)
+        for (size_t i = 0; i < face_indices.size(); ++i)
         {
-            for (auto j = 0; j < face_indices[i].size(); j++)
+            for (size_t j = 0; j < face_indices[i].size(); ++j)
             {
                 usdfile << face_indices[i][j];
                 if (i != face_indices.size() - 1 || j != face_indices[i].size() - 1)
@@ -880,7 +789,7 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
         }
         usdfile << "]\n";
         usdfile << "    point3f[] points = [\n";
-        for (auto i = 0; i < vertices.size(); i++)
+        for (size_t i = 0; i < vertices.size(); ++i)
         {
             usdfile << "        (" << std::scientific << vertices[i][0] << ", " << vertices[i][1] << ", " << vertices[i][2] << ")";
             if (i != vertices.size() - 1)
@@ -899,14 +808,14 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
         wrlfile << "  geometry IndexedFaceSet {\n";
         wrlfile << "    coord Coordinate {\n";
         wrlfile << "      point [\n";
-        for (auto i = 0; i < vertices.size(); i++)
+        for (size_t i = 0; i < vertices.size(); ++i)
             wrlfile << "        " << std::scientific << vertices[i] << ",\n";
         wrlfile << "      ]\n";
         wrlfile << "    }\n";
         wrlfile << "    coordIndex [\n";
-        for (auto i = 0; i < face_indices.size(); i++)
+        for (size_t i = 0; i < face_indices.size(); ++i)
         {
-            for (auto j = 0; j < face_indices[i].size(); j++)
+            for (size_t j = 0; j < face_indices[i].size(); ++j)
                 wrlfile << " " << face_indices[i][j];
             wrlfile << " -1,\n";
         }
@@ -923,15 +832,15 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
         x3dfile << " <Scene>\n";
         x3dfile << "  <Shape>\n";
         x3dfile << "   <IndexedFaceSet coordIndex=\"";
-        for (auto i = 0; i < face_indices.size(); i++)
+        for (size_t i = 0; i < face_indices.size(); ++i)
         {
-            for (auto j = 0; j < face_indices[i].size(); j++)
+            for (size_t j = 0; j < face_indices[i].size(); ++j)
                 x3dfile << face_indices[i][j] << " ";
             x3dfile << "-1 ";
         }
         x3dfile << "\">\n";
         x3dfile << "    <Coordinate point=\"";
-        for (auto i = 0; i < vertices.size(); i++)
+        for (size_t i = 0; i < vertices.size(); ++i)
             x3dfile << std::scientific << vertices[i] << " ";
         x3dfile << "\"/>\n";
         x3dfile << "   </IndexedFaceSet>\n";
@@ -941,7 +850,7 @@ void save_mesh(std::vector<TinyVector<Real, 3>> &vertices, std::vector<std::vect
         x3dfile.close();
     }
     else
-        std::cerr << "Unsupported file format: " << ext << std::endl;
+        std::cerr << "Unsupported file format: " << ext << '\n';
 }
 template <typename Real>
 void save_mesh(MeshLib::Mesh3D<Real> *m_pmesh, const std::string &filename)
@@ -960,7 +869,7 @@ void save_mesh(MeshLib::Mesh3D<Real> *m_pmesh, const std::string &filename)
     else if (ext == "ply")
         SavePLYmesh_with_float_storage(m_pmesh, filename);
     else
-        std::cerr << "Unsupported file format: " << ext << std::endl;
+        std::cerr << "Unsupported file format: " << ext << '\n';
 }
 //////////////////////////////////////////////////////////////////////////
 template <typename Real>
@@ -976,24 +885,21 @@ void save_as_svg(MeshLib::Mesh3D<Real> *m_pmesh, const std::vector<std::array<un
     // if (!ply_face_color.empty())
     {
         board.setLineWidth(0.0);
-        for (auto i = 0; i < m_pmesh->get_num_of_faces(); i++)
+        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_faces(); ++i)
         {
             auto face = m_pmesh->get_face(i);
             auto edge = face->edge;
             std::vector<Point> points;
+            points.reserve(face->valence);
             do
             {
                 const auto p = scale * (edge->pair->vert->pos - center);
-                points.push_back(Point(p[0], p[1]));
+                points.emplace_back(p[0], p[1]);
                 edge = edge->next;
             } while (edge != face->edge);
 
-            // board.setFillColor(Color(ply_face_color[i][0], ply_face_color[i][1], ply_face_color[i][2]));
             if (!ply_face_color.empty())
             {
-                // if (ply_face_color[i][0] < 255)
-                //     board.setFillColor(Color(128, 128, 128));
-                // else
                 board.setFillColor(Color(ply_face_color[i][0], ply_face_color[i][1], ply_face_color[i][2]));
             }
             else
@@ -1005,18 +911,6 @@ void save_as_svg(MeshLib::Mesh3D<Real> *m_pmesh, const std::vector<std::array<un
         }
     }
 
-    // board.setPenColor(Color::Black);
-    // board.setLineWidth(2.0);
-    // for (auto i = 0; i < m_pmesh->get_num_of_edges(); i++)
-    //{
-    //     auto edge = m_pmesh->get_edge(i);
-    //     if (edge > edge->pair)
-    //         continue;
-    //     auto p0 = scale * (edge->pair->vert->pos - center);
-    //     auto p1 = scale * (edge->vert->pos - center);
-    //     board.drawLine(p0[0], p0[1], p1[0], p1[1]);
-    // }
-
     board.saveSVG(svgfilename);
 }
 //////////////////////////////////////////////////////////////////////////
@@ -1026,18 +920,18 @@ void SavePtsPLY(const std::string &filename, const std::vector<TinyVector<Real, 
     std::vector<float> vertexX(points.size()), vertexY(points.size()), vertexZ(points.size()), vertexNormalX, vertexNormalY, vertexNormalZ;
 
 #pragma omp parallel for
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)points.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(points.size()); i++)
     {
-        vertexX[i] = (float)(points[i][0]), vertexY[i] = (float)(points[i][1]), vertexZ[i] = (float)(points[i][2]);
+        vertexX[i] = static_cast<float>(points[i][0]), vertexY[i] = static_cast<float>(points[i][1]), vertexZ[i] = static_cast<float>(points[i][2]);
     }
 
     if (point_normals)
     {
         vertexNormalX.resize(points.size()), vertexNormalY.resize(points.size()), vertexNormalZ.resize(points.size());
 #pragma omp parallel for
-        for (auto i = 0; i < points.size(); i++)
+        for (size_t i = 0; i < points.size(); ++i)
         {
-            vertexNormalX[i] = (float)((*point_normals)[i][0]), vertexNormalY[i] = (float)((*point_normals)[i][1]), vertexNormalZ[i] = (float)((*point_normals)[i][2]);
+            vertexNormalX[i] = static_cast<float>((*point_normals)[i][0]), vertexNormalY[i] = static_cast<float>((*point_normals)[i][1]), vertexNormalZ[i] = static_cast<float>((*point_normals)[i][2]);
         }
     }
 
@@ -1057,21 +951,21 @@ void SavePtsPLY(const std::string &filename, const std::vector<TinyVector<Real, 
     {
         std::vector<std::array<unsigned char, 3>> ply_color(points.size());
 #pragma omp parallel for
-        for (ptrdiff_t i = 0; i < (ptrdiff_t)gray_color->size(); i++)
+        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(gray_color->size()); i++)
         {
-            auto val = std::min(std::max((*gray_color)[i], (Real)0), (Real)1);
+            auto val = std::min(std::max((*gray_color)[i], Real(0)), Real(1));
             if (!use_colormap)
             {
-                ply_color[i][0] = (unsigned char)(val * 255);
-                ply_color[i][1] = (unsigned char)(val * 255);
-                ply_color[i][2] = (unsigned char)(val * 255);
+                ply_color[i][0] = static_cast<unsigned char>(val * 255);
+                ply_color[i][1] = static_cast<unsigned char>(val * 255);
+                ply_color[i][2] = static_cast<unsigned char>(val * 255);
             }
             else
             {
                 const tinycolormap::Color tcolor = tinycolormap::GetColor(val, tinycolormap::ColormapType::Turbo);
-                ply_color[i][0] = (unsigned char)(tcolor.r() * 255);
-                ply_color[i][1] = (unsigned char)(tcolor.g() * 255);
-                ply_color[i][2] = (unsigned char)(tcolor.b() * 255);
+                ply_color[i][0] = static_cast<unsigned char>(tcolor.r() * 255.0);
+                ply_color[i][1] = static_cast<unsigned char>(tcolor.g() * 255.0);
+                ply_color[i][2] = static_cast<unsigned char>(tcolor.b() * 255.0);
             }
         }
         plyOut.addVertexColors(ply_color);
@@ -1092,7 +986,7 @@ void SavePLYmesh_with_float_storage_and_gray_color(MeshLib::Mesh3D<Real> *m_pmes
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_vertices(); i++)
     {
         auto v = m_pmesh->get_vertex(i);
-        vertexX[i] = (float)(v->pos[0]), vertexY[i] = (float)(v->pos[1]), vertexZ[i] = (float)(v->pos[2]);
+        vertexX[i] = static_cast<float>(v->pos[0]), vertexY[i] = static_cast<float>(v->pos[1]), vertexZ[i] = static_cast<float>(v->pos[2]);
     }
     std::vector<std::vector<size_t>> faceIndices(m_pmesh->get_num_of_faces());
 #pragma omp parallel for
@@ -1103,7 +997,7 @@ void SavePLYmesh_with_float_storage_and_gray_color(MeshLib::Mesh3D<Real> *m_pmes
         faceIndices[i].reserve(f->valence);
         do
         {
-            faceIndices[i].emplace_back((size_t)he->vert->id);
+            faceIndices[i].emplace_back(static_cast<size_t>(he->vert->id));
             he = he->next;
         } while (he != f->edge);
     }
@@ -1127,22 +1021,22 @@ void SavePLYmesh_with_float_storage_and_gray_color(MeshLib::Mesh3D<Real> *m_pmes
             ply_color.resize(m_pmesh->get_num_of_vertices());
 
 #pragma omp parallel for
-        for (ptrdiff_t i = 0; i < (ptrdiff_t)(*gray_color).size(); i++)
+        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>((*gray_color).size()); i++)
         {
-            auto val = std::min(std::max((*gray_color)[i], (Real)0), (Real)1);
+            auto val = std::min(std::max((*gray_color)[i], Real(0)), Real(1));
 
             if (!use_colormap)
             {
-                ply_color[i][0] = (unsigned char)(val * 255);
-                ply_color[i][1] = (unsigned char)(val * 255);
-                ply_color[i][2] = (unsigned char)(val * 255);
+                ply_color[i][0] = static_cast<unsigned char>(val * 255);
+                ply_color[i][1] = static_cast<unsigned char>(val * 255);
+                ply_color[i][2] = static_cast<unsigned char>(val * 255);
             }
             else
             {
                 const tinycolormap::Color tcolor = tinycolormap::GetColor(val, tinycolormap::ColormapType::Turbo);
-                ply_color[i][0] = (unsigned char)(tcolor.r() * 255);
-                ply_color[i][1] = (unsigned char)(tcolor.g() * 255);
-                ply_color[i][2] = (unsigned char)(tcolor.b() * 255);
+                ply_color[i][0] = static_cast<unsigned char>(tcolor.r() * 255.0);
+                ply_color[i][1] = static_cast<unsigned char>(tcolor.g() * 255.0);
+                ply_color[i][2] = static_cast<unsigned char>(tcolor.b() * 255.0);
             }
         }
         if (use_face_color)
@@ -1168,20 +1062,22 @@ void SavePLYmesh_with_float_storage_and_gray_color(MeshLib::Mesh3D<Real> *m_pmes
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_vertices(); i++)
     {
         auto v = m_pmesh->get_vertex(i);
-        vertexX[i] = (float)(v->pos[0]), vertexY[i] = (float)(v->pos[1]), vertexZ[i] = (float)(v->pos[2]);
+        vertexX[i] = static_cast<float>(v->pos[0]), vertexY[i] = static_cast<float>(v->pos[1]), vertexZ[i] = static_cast<float>(v->pos[2]);
     }
     std::vector<std::vector<size_t>> faceIndices;
+    faceIndices.reserve(m_pmesh->get_num_of_faces());
     for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_faces(); i++)
     {
         auto f = m_pmesh->get_face(i);
         auto he = f->edge;
         std::vector<size_t> vertex_list;
+        vertex_list.reserve(f->valence);
         do
         {
-            vertex_list.push_back((size_t)he->vert->id);
+            vertex_list.emplace_back(static_cast<size_t>(he->vert->id));
             he = he->next;
         } while (he != f->edge);
-        faceIndices.push_back(vertex_list);
+        faceIndices.emplace_back(vertex_list);
     }
 
     std::vector<std::array<unsigned char, 3>> ply_color;
@@ -1194,10 +1090,10 @@ void SavePLYmesh_with_float_storage_and_gray_color(MeshLib::Mesh3D<Real> *m_pmes
     std::array<unsigned char, 3> c;
     for (size_t i = 0; i < gray_color.size(); i++)
     {
-        auto val = std::min(std::max((gray_color[i] - min_color) / (max_color - min_color), (Real)0), (Real)1);
-        auto color = (unsigned char)(val * 255);
+        auto val = std::min(std::max((gray_color[i] - min_color) / (max_color - min_color), Real(0)), Real(1));
+        auto color = static_cast<unsigned char>(val * 255);
         c[0] = c[1] = c[2] = color;
-        ply_color.push_back(c);
+        ply_color.emplace_back(c);
     }
 
     happly::PLYData plyOut;
@@ -1224,18 +1120,18 @@ void SavePLYmesh_with_float_storage_and_gray_color(const std::string &filename, 
 {
     std::vector<float> vertexX(tri_vertices.size()), vertexY(tri_vertices.size()), vertexZ(tri_vertices.size());
 #pragma omp parallel for
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)tri_vertices.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(tri_vertices.size()); i++)
     {
-        vertexX[i] = (float)(tri_vertices[i][0]), vertexY[i] = (float)(tri_vertices[i][1]), vertexZ[i] = (float)(tri_vertices[i][2]);
+        vertexX[i] = static_cast<float>(tri_vertices[i][0]), vertexY[i] = static_cast<float>(tri_vertices[i][1]), vertexZ[i] = static_cast<float>(tri_vertices[i][2]);
     }
     std::vector<std::vector<size_t>> faceIndices(tri_faces.size() / 3);
 #pragma omp parallel for
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)tri_faces.size() / 3; i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(tri_faces.size()) / 3; i++)
     {
         faceIndices[i].resize(3);
-        faceIndices[i][0] = (size_t)tri_faces[i * 3];
-        faceIndices[i][1] = (size_t)tri_faces[i * 3 + 1];
-        faceIndices[i][2] = (size_t)tri_faces[i * 3 + 2];
+        faceIndices[i][0] = static_cast<size_t>(tri_faces[i * 3]);
+        faceIndices[i][1] = static_cast<size_t>(tri_faces[i * 3 + 1]);
+        faceIndices[i][2] = static_cast<size_t>(tri_faces[i * 3 + 2]);
     }
 
     happly::PLYData plyOut;
@@ -1256,22 +1152,22 @@ void SavePLYmesh_with_float_storage_and_gray_color(const std::string &filename, 
             ply_color.resize(tri_vertices.size());
 
 #pragma omp parallel for
-        for (ptrdiff_t i = 0; i < (ptrdiff_t)(*gray_color).size(); i++)
+        for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>((*gray_color).size()); i++)
         {
-            auto val = std::min(std::max((*gray_color)[i], (Real)0), (Real)1);
+            auto val = std::min(std::max((*gray_color)[i], Real(0)), Real(1));
 
             if (!use_colormap)
             {
-                ply_color[i][0] = (unsigned char)(val * 255);
-                ply_color[i][1] = (unsigned char)(val * 255);
-                ply_color[i][2] = (unsigned char)(val * 255);
+                ply_color[i][0] = static_cast<unsigned char>(val * 255);
+                ply_color[i][1] = static_cast<unsigned char>(val * 255);
+                ply_color[i][2] = static_cast<unsigned char>(val * 255);
             }
             else
             {
                 const tinycolormap::Color tcolor = tinycolormap::GetColor(val, tinycolormap::ColormapType::Turbo);
-                ply_color[i][0] = (unsigned char)(tcolor.r() * 255);
-                ply_color[i][1] = (unsigned char)(tcolor.g() * 255);
-                ply_color[i][2] = (unsigned char)(tcolor.b() * 255);
+                ply_color[i][0] = static_cast<unsigned char>(tcolor.r() * 255.0);
+                ply_color[i][1] = static_cast<unsigned char>(tcolor.g() * 255.0);
+                ply_color[i][2] = static_cast<unsigned char>(tcolor.b() * 255.0);
             }
         }
         if (use_face_color)
@@ -1288,18 +1184,18 @@ void SavePLYMesh_with_color(const std::string &filename, const std::vector<TinyV
 {
     std::vector<float> vertexX(vertices.size()), vertexY(vertices.size()), vertexZ(vertices.size());
 #pragma omp parallel for
-    for (ptrdiff_t i = 0; i < (ptrdiff_t)vertices.size(); i++)
+    for (ptrdiff_t i = 0; i < static_cast<ptrdiff_t>(vertices.size()); i++)
     {
-        vertexX[i] = (float)(vertices[i][0]);
-        vertexY[i] = (float)(vertices[i][1]);
-        vertexZ[i] = (float)(vertices[i][2]);
+        vertexX[i] = static_cast<float>(vertices[i][0]);
+        vertexY[i] = static_cast<float>(vertices[i][1]);
+        vertexZ[i] = static_cast<float>(vertices[i][2]);
     }
 
     std::vector<std::array<unsigned char, 3>> ply_face_color, ply_vertex_color;
     if (face_cluster_ids)
     {
         auto max_cluster_id = *std::max_element(face_cluster_ids->begin(), face_cluster_ids->end());
-        auto cluster_colors = generateDistinctColors((int)max_cluster_id + 1);
+        auto cluster_colors = generateDistinctColors(static_cast<int>(max_cluster_id) + 1);
         ply_face_color.reserve(face_indices.size());
         for (size_t i = 0; i < face_indices.size(); i++)
         {
@@ -1309,7 +1205,7 @@ void SavePLYMesh_with_color(const std::string &filename, const std::vector<TinyV
     if (vertex_cluster_ids)
     {
         auto max_cluster_id = *std::max_element(vertex_cluster_ids->begin(), vertex_cluster_ids->end());
-        auto cluster_colors = generateDistinctColors((int)max_cluster_id + 1);
+        auto cluster_colors = generateDistinctColors(static_cast<int>(max_cluster_id) + 1);
         ply_vertex_color.reserve(vertices.size());
         for (size_t i = 0; i < vertices.size(); i++)
         {
@@ -1323,15 +1219,15 @@ void SavePLYMesh_with_color(const std::string &filename, const std::vector<TinyV
         for (size_t i = 0; i < face_indices.size(); i++)
         {
             if (face_indices[i].size() <= 3)
-                ply_face_color.push_back({255, 0, 0});
+                ply_face_color.emplace_back(std::array<unsigned char, 3>{255, 0, 0});
             else if (face_indices[i].size() == 4)
-                ply_face_color.push_back({230, 230, 230});
+                ply_face_color.emplace_back(std::array<unsigned char, 3>{230, 230, 230});
             else if (face_indices[i].size() == 5)
-                ply_face_color.push_back({0, 0, 255});
+                ply_face_color.emplace_back(std::array<unsigned char, 3>{0, 0, 255});
             else if (face_indices[i].size() == 6)
-                ply_face_color.push_back({0, 255, 0});
+                ply_face_color.emplace_back(std::array<unsigned char, 3>{0, 255, 0});
             else
-                ply_face_color.push_back({255, 255, 0});
+                ply_face_color.emplace_back(std::array<unsigned char, 3>{255, 255, 0});
         }
     }
 

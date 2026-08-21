@@ -15,7 +15,7 @@ LoopMerger<Real>::LoopMerger(MeshLib::Mesh3D<Real> *mesh, int smooth_num) : Tri2
         m_pmesh = mesh;
         mesh->reset_all_tag(false);
         backup_positions.resize(m_pmesh->get_num_of_vertices());
-        for (ptrdiff_t i = 0; i < mesh->get_num_of_vertices(); i++)
+        for (ptrdiff_t i = 0; i < mesh->get_num_of_vertices(); ++i)
             backup_positions[i] = mesh->get_vertex(i)->pos;
         loop_merge();
     }
@@ -57,10 +57,9 @@ void LoopMerger<Real>::loop_merge()
     std::vector<std::pair<ptrdiff_t, Real>> edge_scores;
     edge_scores.reserve(m_pmesh->get_num_of_edges() / 2);
     m_pmesh->reset_edges_tag(false);
-    std::pair<ptrdiff_t, Real> edge_pair;
     TinyVector<Real, 3> quad_normal, dir0, dir1, dir2, dir3;
 
-    for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); i++)
+    for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); ++i)
     {
         auto edge = m_pmesh->get_edge(i);
         if (i > edge->pair->id)
@@ -68,8 +67,6 @@ void LoopMerger<Real>::loop_merge()
         Real angle_regularity = 0;
         if (this->quad_mergeable(edge, angle_regularity, quad_normal, dir0, dir1, dir2, dir3, false))
         {
-            edge_pair.first = i;
-            edge_pair.second = angle_regularity;
             edge_mergeable_tag[i] = edge_mergeable_tag[edge->pair->id] = true;
             edge_quad_regularities[i] = edge_quad_regularities[edge->pair->id] = angle_regularity;
             edge_quad_normals[i] = edge_quad_normals[edge->pair->id] = quad_normal;
@@ -81,7 +78,7 @@ void LoopMerger<Real>::loop_merge()
             edge_quad_directions[4 * edge->pair->id + 1] = dir3;
             edge_quad_directions[4 * edge->pair->id + 2] = dir0;
             edge_quad_directions[4 * edge->pair->id + 3] = dir1;
-            edge_scores.push_back(edge_pair);
+            edge_scores.emplace_back(i, angle_regularity);
         }
         edge->tag = edge->pair->tag = true;
     }
@@ -94,14 +91,14 @@ void LoopMerger<Real>::loop_merge()
     m_pmesh->reset_edges_tag(false);
     m_pmesh->reset_faces_tag(false);
 
-    for (auto edge_score : edge_scores)
+    for (const auto &edge_score : edge_scores)
     {
         auto s_edge = m_pmesh->get_edge(edge_score.first);
 
         if (!this->edge_mergeable(s_edge))
             continue;
 
-        edge_queue.push(std::make_pair(s_edge, (Real)0));
+        edge_queue.emplace(s_edge, Real{0});
 
         while (!edge_queue.empty())
         {
@@ -155,14 +152,14 @@ template <typename Real>
 bool LoopMerger<Real>::tri_merge(bool disable_edge_connected_with_singularity)
 {
     bool trimerged = false;
-    for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); i++)
+    for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); ++i)
     {
         auto edge = m_pmesh->get_edge(i);
         if (edge->tag == false && edge_mergeable_tag[edge->id] && edge->face->tag == false && edge->pair->face->tag == false)
         {
             if (disable_edge_connected_with_singularity && connected_with_singularity(edge))
                 continue;
-            edge_queue.push(std::make_pair(edge, quadflow_alignment_score(edge)));
+            edge_queue.emplace(edge, quadflow_alignment_score(edge));
         }
     }
 
@@ -192,14 +189,14 @@ bool LoopMerger<Real>::local_shift(bool disable_edge_opposite_to_singularity)
     do
     {
         shift = false;
-        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); i++)
+        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); ++i)
         {
             auto edge = m_pmesh->get_edge(i);
             if (edge->tag == false && edge_mergeable_tag[edge->id] && edge->face->tag == false && edge->pair->face->tag)
             {
                 if (disable_edge_opposite_to_singularity && opposite_to_singularity(edge))
                     continue;
-                edge_queue.push(std::make_pair(edge, quadflow_alignment_score(edge)));
+                edge_queue.emplace(edge, quadflow_alignment_score(edge));
             }
         }
 
@@ -246,7 +243,7 @@ bool LoopMerger<Real>::local_shift(bool disable_edge_opposite_to_singularity)
                 {
                     shift = true;
                     shifted = true;
-                    edge_queue.push(std::make_pair(opposite_edge, new_alignment_score));
+                    edge_queue.emplace(opposite_edge, new_alignment_score);
                 }
                 else
                 {
@@ -278,23 +275,23 @@ void LoopMerger<Real>::insert_edge_for_merging(const TinyVector<Real, 3> &normal
             if (angle_difference_0 < angle_difference_1)
             {
                 if (angle_difference_0 < angle_bound)
-                    edge_queue.push(std::make_pair(ne_0, regularity_0));
+                    edge_queue.emplace(ne_0, regularity_0);
             }
             else
             {
                 if (angle_difference_1 < angle_bound)
-                    edge_queue.push(std::make_pair(ne_1, regularity_1));
+                    edge_queue.emplace(ne_1, regularity_1);
             }
         }
         else if (p0 && !p1)
         {
             if (angle_difference_0 < angle_bound)
-                edge_queue.push(std::make_pair(ne_0, regularity_0));
+                edge_queue.emplace(ne_0, regularity_0);
         }
         else if (!p0 && p1)
         {
             if (angle_difference_1 < angle_bound)
-                edge_queue.push(std::make_pair(ne_1, regularity_1));
+                edge_queue.emplace(ne_1, regularity_1);
         }
     }
 }
@@ -338,7 +335,7 @@ Real LoopMerger<Real>::quadflow_alignment_score(MeshLib::HE_edge<Real> *edge, in
 
     Real score = 0;
     int count = 0;
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 4; ++i)
     {
         const auto &dir0 = edge_quad_directions[4 * edge->id + (i + 3) % 4];
         const auto &dir1 = edge_quad_directions[4 * edge->id + (i + 1) % 4];
@@ -375,13 +372,13 @@ bool LoopMerger<Real>::loop_shifting()
     while (loop_shifted)
     {
         loop_shifted = false;
-        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); i++)
+        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); ++i)
         {
             auto edge = m_pmesh->get_edge(i);
 
             if (valid_for_loop_shifting(edge, count == 0))
             {
-                edge_queue.push(std::make_pair(edge, quadflow_alignment_score(edge)));
+                edge_queue.emplace(edge, quadflow_alignment_score(edge));
             }
         }
 
@@ -404,7 +401,7 @@ bool LoopMerger<Real>::loop_shifting()
             bool valid_loop = false;
             while (1)
             {
-                if (start_edge->pair->face == 0)
+                if (start_edge->pair->face == nullptr)
                     break;
 
                 if (start_edge->pair->face->tag == false)
@@ -468,17 +465,17 @@ bool LoopMerger<Real>::loop_shifting()
             if (!valid_loop)
                 continue;
 
-            for (auto edge : old_loop_edge_set)
+            for (auto *loop_edge : old_loop_edge_set)
             {
-                edge->tag = edge->pair->tag = false;
-                edge->face->tag = edge->pair->face->tag = false;
-                edge_changed_tag[edge->id] = edge_changed_tag[edge->pair->id] = true;
+                loop_edge->tag = loop_edge->pair->tag = false;
+                loop_edge->face->tag = loop_edge->pair->face->tag = false;
+                edge_changed_tag[loop_edge->id] = edge_changed_tag[loop_edge->pair->id] = true;
             }
-            for (auto edge : new_loop_edge_set)
+            for (auto *loop_edge : new_loop_edge_set)
             {
-                edge->tag = edge->pair->tag = true;
-                edge->face->tag = edge->pair->face->tag = true;
-                edge_changed_tag[edge->id] = edge_changed_tag[edge->pair->id] = true;
+                loop_edge->tag = loop_edge->pair->tag = true;
+                loop_edge->face->tag = loop_edge->pair->face->tag = true;
+                edge_changed_tag[loop_edge->id] = edge_changed_tag[loop_edge->pair->id] = true;
             }
 
             loop_shifted = true;
@@ -498,7 +495,7 @@ int LoopMerger<Real>::vertex_valid_degree(MeshLib::HE_vert<Real> *vert, bool &bo
     {
         if (edge->tag == false)
             valid_edge_degree++;
-        if (edge->face == 0)
+        if (edge->face == nullptr)
             boundary_vertex_tag = true;
         edge = edge->pair->next;
     } while (edge != vert->edge);
@@ -508,7 +505,7 @@ int LoopMerger<Real>::vertex_valid_degree(MeshLib::HE_vert<Real> *vert, bool &bo
 template <typename Real>
 bool LoopMerger<Real>::valid_for_loop_shifting(MeshLib::HE_edge<Real> *edge, const bool relaxed)
 {
-    if (edge->face == 0 || edge->face->valence != 3 || edge->face->tag || edge->tag || edge->pair->tag)
+    if (edge->face == nullptr || edge->face->valence != 3 || edge->face->tag || edge->tag || edge->pair->tag)
         return false;
 
     if (!edge_mergeable_tag[edge->id])
@@ -537,10 +534,10 @@ void LoopMerger<Real>::vertex_smoothing(int max_iter)
 
     vertex_smooth_valence.assign(m_pmesh->get_num_of_vertices(), 0);
 
-    for (int iter = 0; iter < max_iter; iter++)
+    for (int iter = 0; iter < max_iter; ++iter)
     {
         new_positions.assign(m_pmesh->get_num_of_vertices(), TinyVector<Real, 3>(0, 0, 0));
-        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); i++)
+        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); ++i)
         {
             auto edge = m_pmesh->get_edge(i);
             if (edge->tag == true || edge->id > edge->pair->id)
@@ -556,7 +553,7 @@ void LoopMerger<Real>::vertex_smoothing(int max_iter)
             }
         }
 
-        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_vertices(); i++)
+        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_vertices(); ++i)
         {
             auto v = m_pmesh->get_vertex(i);
             if (vertex_smooth_valence[i] > 0)
@@ -575,7 +572,7 @@ bool LoopMerger<Real>::cleanup()
     while (find)
     {
         find = false;
-        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); i++)
+        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); ++i)
         {
             auto edge = m_pmesh->get_edge(i);
             if (edge->tag == true && edge->face && edge->pair->face && edge->face->valence == 3 && edge->pair->face->valence == 3)
@@ -611,7 +608,7 @@ bool LoopMerger<Real>::cleanup()
     while (find)
     {
         find = false;
-        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); i++)
+        for (ptrdiff_t i = 0; i < m_pmesh->get_num_of_edges(); ++i)
         {
             auto edge = m_pmesh->get_edge(i);
             if (edge->tag == false && edge->face && edge->pair->face && edge->face->valence == 3 && edge->pair->face->valence == 3 && edge->face->tag == false && edge->pair->face->tag == false && trigger_degree_2_vertex(edge) == false)

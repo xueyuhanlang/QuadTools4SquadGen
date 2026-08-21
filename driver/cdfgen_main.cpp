@@ -38,8 +38,8 @@ int main(int argc, char **argv)
         auto result = options.parse(argc, argv);
         if (result.count("help"))
         {
-            std::cout << options.help({"", "Group"}) << std::endl;
-            exit(0);
+            std::cout << options.help({"", "Group"}) << '\n';
+            return 0;
         }
 
         if (result.count("i"))
@@ -48,22 +48,22 @@ int main(int argc, char **argv)
 
             if (!std::filesystem::exists(inputfile))
             {
-                std::cout << "Input file " << inputfile << " does not exist!" << std::endl;
-                exit(0);
+                std::cout << "Input file " << inputfile << " does not exist!\n";
+                return 1;
             }
 
             MeshLib::Mesh3D<double> *mesh = load_mesh<double>(inputfile.c_str());
             if (!mesh)
             {
-                std::cout << "Failed to load mesh from " << inputfile << std::endl;
-                exit(0);
+                std::cout << "Failed to load mesh from " << inputfile << '\n';
+                return 1;
             }
 
             auto output_npz = result.count("d");
             if (!output_npz)
             {
-                std::cout << "No output directory specified. Use -d option." << std::endl;
-                exit(0);
+                std::cout << "No output directory specified. Use -d option.\n";
+                return 1;
             }
             auto npz_output_folder = output_npz ? result["d"].as<std::string>() : std::filesystem::current_path().string();
 
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
                     }
                     catch (const std::exception &e)
                     {
-                        std::cout << "Error in processing " << inputfile << "; submesh_id: " << mesh_count << std::endl;
+                        std::cout << "Error in processing " << inputfile << "; submesh_id: " << mesh_count << '\n';
                         std::cerr << e.what() << '\n';
                     }
                     if (subdivmesh != submesh)
@@ -138,14 +138,14 @@ int main(int argc, char **argv)
         }
         else
         {
-            std::cout << "No input file! Use -i option." << std::endl;
-            exit(0);
+            std::cout << "No input file! Use -i option.\n";
+            return 1;
         }
     }
     catch (const cxxopts::exceptions::exception &e)
     {
-        std::cout << "Error parsing options: " << e.what() << std::endl;
-        exit(0);
+        std::cout << "Error parsing options: " << e.what() << '\n';
+        return 1;
     }
     return 0;
 }
