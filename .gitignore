@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Environments
+.venv/
+venv/
+env/
+
+# Build artifacts
+build/
+dist/
+*.so
+
+# SQuadGen outputs and checkpoints
+outputs/
+results/
+results2/
+checkpoints/
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+wandb/
+
+# Editor and OS files
+.vscode/
+.DS_Store
