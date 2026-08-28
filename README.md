@@ -3,7 +3,7 @@
 **Author:** Yang Liu (yangliu@microsoft.com)
 
 ## Description
-**QuadTools** is a mesh processing toolkit developed for [our SQuadGen paper](https://youkang-kong.github.io/squadgen/) (SIGGRAPH 2026). It is used to generate the [training data](https://drive.google.com/file/d/1GthfgyHuYqhVeci7BJg-_6uc3QDH52IQ/view?usp=drive_link) for SQuadGen.
+**QuadTools** is a mesh processing toolkit developed for [our SQuadGen paper](https://microsoft.github.io/SQuadGen/) (SIGGRAPH 2026). It is used to generate the [training data (2.68GB)](https://drive.google.com/file/d/1GthfgyHuYqhVeci7BJg-_6uc3QDH52IQ/view?usp=sharing) for SQuadGen.
 
 ## Features
 
@@ -27,7 +27,7 @@
 ```bash
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . -j$(nproc)
+cmake --build . -j16 --config Release
 ```
 
 To enable OpenMP (not compatible with Python multiprocessing):

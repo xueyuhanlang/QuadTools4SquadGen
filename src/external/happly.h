@@ -52,6 +52,7 @@ SOFTWARE.
 
 #include <array>
 #include <cctype>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -239,6 +240,10 @@ T swapEndian(T val) {
   }
   return val;
 }
+
+// The following specializations for single-byte types are used to avoid compiler warnings.
+template <> int8_t swapEndian<int8_t>(int8_t val) { return val; }
+template <> uint8_t swapEndian<uint8_t>(uint8_t val) { return val; }
 
 
 // Unpack flattened list from the convention used in TypedListProperty
@@ -743,7 +748,7 @@ inline std::unique_ptr<Property> createPropertyWithType(const std::string& name,
     }
   }
 
-  //
+  // = Float
 
   // 32 bit float
   else if (typeStr == "float" || typeStr == "float32") {
@@ -949,7 +954,7 @@ public:
 
     // Find the property
     std::unique_ptr<Property>& prop = getPropertyPtr(propertyName);
-    TypedProperty<T>* castedProp = dynamic_cast<TypedProperty<T>*>(prop);
+    TypedProperty<T>* castedProp = dynamic_cast<TypedProperty<T>*>(prop.get());
     if (castedProp) {
       return castedProp->data;
     }
@@ -992,7 +997,7 @@ public:
 
     // Find the property
     std::unique_ptr<Property>& prop = getPropertyPtr(propertyName);
-    TypedListProperty<T>* castedProp = dynamic_cast<TypedListProperty<T>*>(prop);
+    TypedListProperty<T>* castedProp = dynamic_cast<TypedListProperty<T>*>(prop.get());
     if (castedProp) {
       return unflattenList(castedProp->flattenedData, castedProp->flattenedIndexStart);
     }
@@ -1441,7 +1446,7 @@ public:
 
   /**
    * @brief Common-case helper get mesh vertex positions
-   *typename CustomVector3
+   *
    * @param vertexElementName The element name to use (default: "vertex")
    *
    * @return A vector of vertex positions.
@@ -1804,7 +1809,7 @@ public:
    *
    * @param colors A vector of vertex colors as floating point [0,1] values. Internally converted to [0,255] chars.
    */
-     void addVertexColors(std::vector<std::array<double, 3>>& colors) {
+  void addVertexColors(std::vector<std::array<double, 3>>& colors) {
 
     std::string vertexName = "vertex";
     size_t N = colors.size();
@@ -2259,6 +2264,8 @@ private:
 
       // Parse a comment
       if (startsWith(line, "comment")) {
+        // Skip the comment if it's empty
+        if (line.length() <= 8) continue;
         string comment = line.substr(8);
         if (verbose) cout << "  - Comment: " << comment << endl;
         comments.push_back(comment);
@@ -2267,6 +2274,8 @@ private:
 
       // Parse an obj_info comment
       if (startsWith(line, "obj_info")) {
+        // Skip the comment if it's empty
+        if (line.length() <= 9) continue;
         string infoComment = line.substr(9);
         if (verbose) cout << "  - obj_info: " << infoComment << endl;
         objInfoComments.push_back(infoComment);

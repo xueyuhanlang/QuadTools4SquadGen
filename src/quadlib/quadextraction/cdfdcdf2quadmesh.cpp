@@ -1503,7 +1503,9 @@ void CDFDCDF2QuadMesh<Real>::cdf_build_quad_patches()
                 return false;
             else if (vertex_type > other.vertex_type)
                 return true;
-            if (edge_length > other.edge_length)
+			else if (vertex_type < other.vertex_type)
+				return false;
+			else if (edge_length > other.edge_length)
                 return true;
             return false;
         }
