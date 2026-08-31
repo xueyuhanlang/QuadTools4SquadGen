@@ -3,7 +3,7 @@
 **Author:** Yang Liu (yangliu@microsoft.com)
 
 ## Description
-**QuadTools** is a mesh processing toolkit developed for [our SQuadGen paper](https://microsoft.github.io/SQuadGen/) (SIGGRAPH 2026). It is used to generate the [training data (2.68GB)](https://drive.google.com/file/d/1GthfgyHuYqhVeci7BJg-_6uc3QDH52IQ/view?usp=sharing) for SQuadGen.
+**QuadTools** is a mesh processing toolkit developed for [our SQuadGen paper](https://microsoft.github.io/SQuadGen/) (SIGGRAPH 2026). It is used to generate the [training data (2.68GB)](https://drive.google.com/file/d/1GthfgyHuYqhVeci7BJg-_6uc3QDH52IQ/view?usp=sharing) for SQuadGen's SQ-VAE and SQ-Diffuse.
 
 ## Features
 
@@ -42,7 +42,7 @@ All tools are command-line executables. Run any tool with `-h` to see the full l
 
 > `PLY` is recommended as the preferred I/O format due to its compact binary storage and flexible property handling.
 
-> Although the code can load `GLB`/`FBX` files through third-party libraries, I recommend converting `GLB` to `PLY` with the Blender Python API for more robust handling of complex scenes.
+> Although the code can load `GLB`/`FBX` files through third-party libraries, I recommend converting `GLB`/`FBX` to `PLY` with the Blender Python API for more robust handling of complex scenes.
 
 ### FormatConvert — Mesh Format Conversion
 
@@ -74,15 +74,15 @@ Convert non-manifold or seam-containing meshes to manifold. **Components that re
 ./build/LoopQuad -i ./samples/part_tri.ply -o ./samples/part_quad.ply 
 ```
 
-| Option | Description                                             | Default |
-| ------ | ------------------------------------------------------- | ------- |
-| `-i`   | Input mesh (OBJ, OFF, PLY, GLB, STL, etc.)              | —       |
-| `-o`   | Output quad mesh (OBJ, OFF, PLY)                        | —       |
-| `-q`   | Loop simplicity threshold (0–1, higher = stricter)      | 0.8     |
-| `-m`   | Minimum face count; skip components smaller than this   | 16      |
-| `-s`   | Subdivide triangles into quads instead of merging       | false   |
-| `-d`   | Debug mode (use to export non-pure-quad results) | false   |
-| `-n`   | Enable non-manifold input handling                      | true    |
+| Option | Description                                           | Default |
+| ------ | ----------------------------------------------------- | ------- |
+| `-i`   | Input mesh (OBJ, OFF, PLY, GLB, STL, etc.)            | —       |
+| `-o`   | Output quad mesh (OBJ, OFF, PLY)                      | —       |
+| `-q`   | Loop simplicity threshold (0–1, higher = stricter)    | 0.8     |
+| `-m`   | Minimum face count; skip components smaller than this | 16      |
+| `-s`   | Subdivide triangles into quads instead of merging     | false   |
+| `-d`   | Debug mode (use to export non-pure-quad results)      | false   |
+| `-n`   | Enable non-manifold input handling                    | true    |
 
 
 ### QuadQuality — Mesh Quality Analysis
@@ -96,14 +96,14 @@ In the JSON file, `FratioN` and `EratioN` correspond to the face-loop simplicity
 Use `-v` to print the summary to the console.
 You can visualize the colorized quad layouts by dragging files from `complex_dir` into [MeshLab](https://www.meshlab.net/).
 
-| Option | Description                                                     | Default |
-| ------ | --------------------------------------------------------------- | ------- |
-| `-i`   | Input quad mesh                                                 | —       |
-| `-o`   | Output directory (dump submeshes), optional                     | —       |
-| `-j`   | JSON output folder for quality metrics, optional                | —       |
+| Option | Description                                                             | Default |
+| ------ | ----------------------------------------------------------------------- | ------- |
+| `-i`   | Input quad mesh                                                         | —       |
+| `-o`   | Output directory (dump submeshes), optional                             | —       |
+| `-j`   | JSON output folder for quality metrics, optional                        | —       |
 | `-d`   | Folder for dumping layout complexity data (for visualization), optional | -       |
-| `-m`   | Dump layout complexity for the component with the most faces | true    |
-| `-v`   | Verbose output                                                  | false   |
+| `-m`   | Dump layout complexity for the component with the most faces            | true    |
+| `-v`   | Verbose output                                                          | false   |
 
 
 ### CDFGen — CDF Training Data Generation
@@ -114,17 +114,17 @@ For each component of the input quad mesh, **CDFGen** generates chart distance f
 ./build/CDFGen -i ./samples/duck_quad.ply -d ./samples/npz
 ```
 
-| Option | Description                                                                      | Default |
-| ------ | -------------------------------------------------------------------------------- | ------- |
-| `-i`   | Input quad mesh (OBJ, OFF, PLY)                                                  | —       |
-| `-d`   | Output directory for NPZ files                                                   | —       |
-| `-f`   | Output filename prefix  (optional)                                               | —       |
-| `-n`   | Number of sample points                                                          | 50000   |
-| `-a`   | Sharp feature angle (degrees)                                                    | 130     |
-| `-s`   | Random seed (int) for point sampling                                             | 0       |
+| Option | Description                                                                        | Default |
+| ------ | ---------------------------------------------------------------------------------- | ------- |
+| `-i`   | Input quad mesh (OBJ, OFF, PLY)                                                    | —       |
+| `-d`   | Output directory for NPZ files                                                     | —       |
+| `-f`   | Output filename prefix  (optional)                                                 | —       |
+| `-n`   | Number of sample points                                                            | 50000   |
+| `-a`   | Sharp feature angle (degrees)                                                      | 130     |
+| `-s`   | Random seed (int) for point sampling                                               | 0       |
 | `-q`   | Write additional information into NPZ files for debugging the quad extraction code | false   |
 
-The NPZ file can be visualized using `python/npzloader.py` which converts CDF/DCDF to textured OBJ files as well as GLB files:
+The NPZ file can be visualized using `python/npzloader.py` which converts CDF/DCDF to textured OBJ files (as well as GLB files which are generated automatically):
 
 ```bash
 # Install the required Python packages
@@ -145,6 +145,11 @@ Extract quad meshes from CDF/DCDF parameterizations.
 ```bash
 ./build/QuadExtraction -i subdivided.ply -f features.npz -o outputquad.ply --ringsize=8 --verbose=false -a 150 --div=0 -t 0.1 -s 3 -r 15
 ```
+you may also need to specify `div=1` for getting better results in some cases.
+```bash
+./build/QuadExtraction -i subdivided.ply -f features.npz -o outputquad.ply --ringsize=4 --verbose=false -a 150 --div=1 -t 0.2 -s 3 -r 15
+```
+
 `subdivided.ply` is the densely subdivided version of the original input triangle mesh, and `features.npz` stores the CDF/DCDF values at its triangle faces and/or vertices along with offset information.
 
  - You can simulate these two files by specifying the `-q` option when running CDFGen; a file named `subdiv.ply` will be generated alongside the NPZ file in the specified output folder.
@@ -155,7 +160,9 @@ Extract quad meshes from CDF/DCDF parameterizations.
       ./build/QuadExtraction -i ./samples/npz/subdiv.ply -f ./samples/npz/duck_quad_0.npz -o ./samples/npz/quadoutput.ply --ringsize=8 --verbose=false -a 150 --div=0 -t 0.1 -s 3 -r 15
   ```
 
-- For the SQuadGen neural network, the Python code creates `subdivided.ply` and `features.npz` automatically.
+ - For the SQuadGen neural network, the Python code creates `subdivided.ply` and `features.npz` automatically.
+
+#### Note: The algorithm output is sensitive to the parameter choices.
 
 
 | Option       | Description                                          | Default |
